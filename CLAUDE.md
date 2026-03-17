@@ -27,7 +27,7 @@ packages/
 
 ## Design Principle
 
-These are thin API clients to the xenarch.bot backend. No business logic lives here — just MCP tool definitions that call the platform API.
+These are thin API clients to the xenarch.dev backend. No business logic lives here — just MCP tool definitions that call the platform API.
 
 ## Workflow
 
