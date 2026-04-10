@@ -1,0 +1,50 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.xenarch-ai/xenarch-mcp",
+  "description": "Pay for any x402-gated content or API with USDC micropayments on Base.",
+  "repository": {
+    "url": "https://github.com/xenarch-ai/xenarch-mcp",
+    "source": "github"
+  },
+  "version": "0.1.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@xenarch/agent-mcp",
+      "version": "0.1.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Wallet private key (hex, 0x-prefixed). Auto-generates on first run if omitted.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true,
+          "name": "XENARCH_PRIVATE_KEY"
+        },
+        {
+          "description": "Base RPC endpoint URL",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "XENARCH_RPC_URL"
+        },
+        {
+          "description": "Network for payments (base or base-sepolia)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "XENARCH_NETWORK"
+        },
+        {
+          "description": "Max USD to auto-approve without prompting",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "XENARCH_AUTO_APPROVE_MAX"
+        }
+      ]
+    }
+  ]
+}
