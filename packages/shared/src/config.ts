@@ -53,8 +53,14 @@ export async function loadConfig(): Promise<XenarchConfig> {
   }
 
   if (!config.privateKey) {
-    throw new Error(
-      "No wallet configured. Set XENARCH_PRIVATE_KEY env var, or create ~/.xenarch/wallet.json with { \"privateKey\": \"0x...\" }",
+    // Auto-generate wallet on first use
+    const { address, privateKey } = await generateWallet();
+    config.privateKey = privateKey;
+    console.error(
+      `Created new Xenarch wallet: ${address}\n` +
+        `Saved to: ~/.xenarch/wallet.json\n\n` +
+        `Fund this wallet with USDC on Base to start paying.\n` +
+        `You also need a small amount of ETH on Base for gas.`,
     );
   }
 
