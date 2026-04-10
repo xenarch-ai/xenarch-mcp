@@ -1,0 +1,34 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required: []
+    properties:
+      privateKey:
+        type: string
+        description: "Wallet private key (hex, 0x-prefixed). Auto-generates on first run if omitted."
+      rpcUrl:
+        type: string
+        default: "https://mainnet.base.org"
+        description: "Base RPC endpoint URL"
+      network:
+        type: string
+        enum:
+          - base
+          - base-sepolia
+        default: "base"
+        description: "Network for payments"
+      autoApproveMaxUsd:
+        type: number
+        description: "Max USD to auto-approve without prompting"
+  commandFunction: |
+    (config) => ({
+      command: 'npx',
+      args: ['@xenarch/agent-mcp'],
+      env: {
+        XENARCH_PRIVATE_KEY: config.privateKey || '',
+        XENARCH_RPC_URL: config.rpcUrl || 'https://mainnet.base.org',
+        XENARCH_NETWORK: config.network || 'base',
+        XENARCH_AUTO_APPROVE_MAX: config.autoApproveMaxUsd ? String(config.autoApproveMaxUsd) : ''
+      }
+    })
