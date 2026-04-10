@@ -1,0 +1,31 @@
+{
+  "name": "@xenarch/agent-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for AI agents to discover and pay for services via Xenarch",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "xenarch-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@xenarch/shared": "*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  },
+  "keywords": ["xenarch", "mcp", "ai-agent", "micropayments", "x402", "usdc"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xenarch-ai/xenarch-mcp"
+  }
+}
