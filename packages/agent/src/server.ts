@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { loadConfig } from "@xenarch/shared";
-import type { XenarchConfig } from "@xenarch/shared";
+import { loadConfig } from "@xenarch/core";
+import type { XenarchConfig } from "@xenarch/core";
 import { checkGateSchema, checkGate } from "./tools/check-gate.js";
 import { paySchema, pay } from "./tools/pay.js";
 import { getHistorySchema, getHistory } from "./tools/get-history.js";

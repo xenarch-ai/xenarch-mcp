@@ -9,8 +9,8 @@ import {
   MOCK_USDC_SEPOLIA,
   SPLITTER_ADDRESS_MAINNET,
   SPLITTER_ADDRESS_SEPOLIA,
-} from "@xenarch/shared";
-import type { XenarchConfig } from "@xenarch/shared";
+} from "@xenarch/core";
+import type { XenarchConfig } from "@xenarch/core";
 
 export const paySchema = z.object({
   url: z
