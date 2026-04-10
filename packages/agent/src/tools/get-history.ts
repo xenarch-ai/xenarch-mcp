@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { getPaymentHistory, createSigner } from "@xenarch/shared";
-import type { XenarchConfig } from "@xenarch/shared";
+import { getPaymentHistory, createSigner } from "@xenarch/core";
+import type { XenarchConfig } from "@xenarch/core";
 
 export const getHistorySchema = z.object({
   domain: z

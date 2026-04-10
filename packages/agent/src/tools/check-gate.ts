@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { fetchGate, fetchGateByDomain } from "@xenarch/shared";
-import type { XenarchConfig } from "@xenarch/shared";
+import { fetchGate, fetchGateByDomain } from "@xenarch/core";
+import type { XenarchConfig } from "@xenarch/core";
 
 export const checkGateSchema = z.object({
   url: z
