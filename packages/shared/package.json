@@ -1,7 +1,6 @@
 {
   "name": "@xenarch/shared",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,5 +13,15 @@
   },
   "devDependencies": {
     "typescript": "^5.5.0"
+  },
+  "keywords": ["xenarch", "x402", "micropayments", "usdc"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xenarch-ai/xenarch-mcp",
+    "directory": "packages/shared"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

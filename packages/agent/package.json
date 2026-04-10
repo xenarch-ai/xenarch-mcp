@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
-    "@xenarch/shared": "*",
+    "@xenarch/shared": "^0.1.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
@@ -26,6 +26,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/xenarch-ai/xenarch-mcp"
+    "url": "https://github.com/xenarch-ai/xenarch-mcp",
+    "directory": "packages/agent"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
