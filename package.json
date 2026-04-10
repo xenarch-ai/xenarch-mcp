@@ -1,0 +1,15 @@
+{
+  "name": "xenarch-mcp",
+  "private": true,
+  "workspaces": [
+    "packages/shared",
+    "packages/agent"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "clean": "rm -rf packages/*/dist"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
