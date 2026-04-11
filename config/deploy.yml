@@ -1,0 +1,39 @@
+service: xenarch-mcp
+
+image: emdevries/xenarch-mcp
+
+servers:
+  web:
+    hosts:
+      - 5.78.183.39
+
+registry:
+  username: emdevries
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  arch: amd64
+
+logging:
+  driver: json-file
+  options:
+    max-size: 100m
+    max-file: "2"
+
+env:
+  clear:
+    TRANSPORT: http
+    XENARCH_NETWORK: base
+    XENARCH_RPC_URL: https://mainnet.base.org
+  secret:
+    - XENARCH_PRIVATE_KEY
+
+proxy:
+  ssl: true
+  host: mcp.xenarch.dev
+  app_port: 3000
+  healthcheck:
+    path: /health
+    interval: 10
+    timeout: 5
