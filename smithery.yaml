@@ -1,5 +1,5 @@
 startCommand:
-  type: stdio
+  type: http
   configSchema:
     type: object
     required: []
@@ -23,12 +23,13 @@ startCommand:
         description: "Max USD to auto-approve without prompting"
   commandFunction: |
     (config) => ({
-      command: 'npx',
-      args: ['@xenarch/agent-mcp'],
+      command: 'node',
+      args: ['packages/agent/dist/index.js', '--http'],
       env: {
         XENARCH_PRIVATE_KEY: config.privateKey || '',
         XENARCH_RPC_URL: config.rpcUrl || 'https://mainnet.base.org',
         XENARCH_NETWORK: config.network || 'base',
-        XENARCH_AUTO_APPROVE_MAX: config.autoApproveMaxUsd ? String(config.autoApproveMaxUsd) : ''
+        XENARCH_AUTO_APPROVE_MAX: config.autoApproveMaxUsd ? String(config.autoApproveMaxUsd) : '',
+        PORT: '{{port}}'
       }
     })

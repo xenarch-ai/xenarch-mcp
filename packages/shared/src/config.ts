@@ -13,7 +13,12 @@ export async function ensureConfigDir(): Promise<void> {
   await mkdir(CONFIG_DIR, { recursive: true, mode: 0o700 });
 }
 
-export async function loadConfig(): Promise<XenarchConfig> {
+export interface LoadConfigResult {
+  config: XenarchConfig;
+  walletCreated?: { address: string };
+}
+
+export async function loadConfig(): Promise<LoadConfigResult> {
   let config: Partial<XenarchConfig> = {};
 
   // Read config file
@@ -52,23 +57,23 @@ export async function loadConfig(): Promise<XenarchConfig> {
     config.autoApproveMaxUsd = parseFloat(process.env.XENARCH_AUTO_APPROVE_MAX);
   }
 
+  let walletCreated: { address: string } | undefined;
+
   if (!config.privateKey) {
     // Auto-generate wallet on first use
     const { address, privateKey } = await generateWallet();
     config.privateKey = privateKey;
-    console.error(
-      `Created new Xenarch wallet: ${address}\n` +
-        `Saved to: ~/.xenarch/wallet.json\n\n` +
-        `Fund this wallet with USDC on Base to start paying.\n` +
-        `You also need a small amount of ETH on Base for gas.`,
-    );
+    walletCreated = { address };
   }
 
   return {
-    ...DEFAULT_CONFIG,
-    ...config,
-    privateKey: config.privateKey,
-  } as XenarchConfig;
+    config: {
+      ...DEFAULT_CONFIG,
+      ...config,
+      privateKey: config.privateKey,
+    } as XenarchConfig,
+    walletCreated,
+  };
 }
 
 /**
