@@ -1,6 +1,6 @@
 {
   "name": "@xenarch/agent-mcp",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "mcpName": "io.github.xenarch-ai/xenarch-mcp",
   "description": "MCP server for AI agents to discover and pay for services via Xenarch",
   "type": "module",

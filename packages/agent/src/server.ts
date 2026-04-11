@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { loadConfig } from "@xenarch/core";
-import type { XenarchConfig } from "@xenarch/core";
+import type { XenarchConfig, LoadConfigResult } from "@xenarch/core";
 import { checkGateSchema, checkGate } from "./tools/check-gate.js";
 import { paySchema, pay } from "./tools/pay.js";
 import { getHistorySchema, getHistory } from "./tools/get-history.js";
@@ -57,13 +57,30 @@ export function createServer(): McpServer {
     }),
   );
 
-  let configCache: XenarchConfig | null = null;
+  let configResult: LoadConfigResult | null = null;
 
   async function getConfig(): Promise<XenarchConfig> {
-    if (!configCache) {
-      configCache = await loadConfig();
+    if (!configResult) {
+      configResult = await loadConfig();
     }
-    return configCache;
+    return configResult.config;
+  }
+
+  function consumeWalletNotice(): string | null {
+    if (!configResult?.walletCreated) return null;
+    const addr = configResult.walletCreated.address;
+    const notice = `A new Xenarch wallet was just created: ${addr}\n` +
+      `It has no funds yet. To make payments, the user needs to send USDC and a small amount of ETH (for gas) to this address on Base.\n` +
+      `Wallet saved to ~/.xenarch/wallet.json\n` +
+      `IMPORTANT: Tell the user about this new wallet and that they need to fund it before payments will work.`;
+    configResult.walletCreated = undefined;
+    return notice;
+  }
+
+  function withWalletNotice(content: Array<{ type: "text"; text: string }>): Array<{ type: "text"; text: string }> {
+    const notice = consumeWalletNotice();
+    if (!notice) return content;
+    return [{ type: "text" as const, text: notice }, ...content];
   }
 
   server.tool(
@@ -76,7 +93,7 @@ export function createServer(): McpServer {
         const config = await getConfig();
         const result = await checkGate(input, config);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: withWalletNotice([{ type: "text", text: JSON.stringify(result, null, 2) }]),
         };
       } catch (error) {
         return {
@@ -102,7 +119,7 @@ export function createServer(): McpServer {
         const config = await getConfig();
         const result = await pay(input, config);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: withWalletNotice([{ type: "text", text: JSON.stringify(result, null, 2) }]),
         };
       } catch (error) {
         return {
@@ -128,7 +145,7 @@ export function createServer(): McpServer {
         const config = await getConfig();
         const result = await getHistory(input, config);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: withWalletNotice([{ type: "text", text: JSON.stringify(result, null, 2) }]),
         };
       } catch (error) {
         return {
