@@ -1,6 +1,6 @@
 {
   "name": "@xenarch/agent-mcp",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "mcpName": "io.github.xenarch-ai/xenarch-mcp",
   "description": "MCP server for AI agent payments — check and pay for x402-gated content and APIs with USDC micropayments on Base",
   "type": "module",
@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
-    "@xenarch/core": "^0.1.0",
+    "@xenarch/core": "^0.1.1",
     "express": "^5.2.1",
     "zod": "^3.23.0"
   },
