@@ -6,7 +6,7 @@ export const checkGateSchema = z.object({
   url: z
     .string()
     .describe(
-      "The URL to check for a Xenarch payment gate. Can be a full URL (https://example.com/page) or just a domain (example.com).",
+      "The URL or domain to check for an x402 payment gate. Accepts a full URL (https://example.com/article) or bare domain (example.com). Returns pricing in USD and payment details if gated.",
     ),
 });
 

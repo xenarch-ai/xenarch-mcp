@@ -1,4 +1,6 @@
 {
   "$schema": "https://glama.ai/mcp/schemas/server.json",
-  "maintainers": ["emdevries"]
+  "maintainers": ["emdevries"],
+  "name": "Xenarch",
+  "description": "MCP server for AI agent payments. Pay for x402-gated content and APIs with USDC micropayments on Base."
 }

@@ -6,14 +6,14 @@ export const getHistorySchema = z.object({
   domain: z
     .string()
     .optional()
-    .describe("Filter history by domain. Returns all if omitted."),
+    .describe("Filter payment history by domain (e.g. 'example.com'). Omit to return all payments across all domains."),
   limit: z
     .number()
     .int()
     .min(1)
     .max(100)
     .default(10)
-    .describe("Maximum number of results to return (1-100, default 10)."),
+    .describe("Maximum number of payment records to return (1-100, default 10). Use higher values to see full spending history."),
 });
 
 export type GetHistoryInput = z.infer<typeof getHistorySchema>;

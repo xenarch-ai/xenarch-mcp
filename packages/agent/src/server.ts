@@ -85,7 +85,7 @@ export function createServer(): McpServer {
 
   server.tool(
     "xenarch_check_gate",
-    "Check if a URL or domain has a Xenarch payment gate. Returns pricing, payment instructions, and gate details.",
+    "Check if a URL or domain has an x402 payment gate. Returns gate status, price in USD, USDC splitter contract address, collector wallet, network (Base or Base Sepolia), asset, and protocol. Use this before paying to confirm pricing, when a URL returns HTTP 402 Payment Required, or when a user asks whether content is paywalled.",
     checkGateSchema.shape,
     { title: "Check Payment Gate", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     async (input) => {
@@ -111,7 +111,7 @@ export function createServer(): McpServer {
 
   server.tool(
     "xenarch_pay",
-    "Pay for gated content or a service via Xenarch. Executes a USDC micropayment on Base through the splitter contract. Returns a transaction hash and access token.",
+    "Execute a USDC micropayment on Base L2 to access x402-gated content or an API. Checks USDC balance first, then sends payment through a verified Xenarch splitter contract, waits for on-chain confirmation, and returns a transaction hash, block number, amount paid, and a time-limited Bearer access token to unlock the resource. Optionally override the gate price with a custom amount. Use this after xenarch_check_gate confirms a gate exists, or when a user asks to pay for or unlock gated content.",
     paySchema.shape,
     { title: "Pay for Content", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async (input) => {
@@ -137,7 +137,7 @@ export function createServer(): McpServer {
 
   server.tool(
     "xenarch_get_history",
-    "View your Xenarch payment history. Shows past micropayments made by this wallet, optionally filtered by domain.",
+    "List past USDC micropayments made by this wallet through Xenarch. Returns transaction hashes, URLs, domains, amounts in USD, timestamps, total spend, and payment count. Optionally filter by domain. Use this to audit spending, check if you already paid for a resource, or track agent expenditure.",
     getHistorySchema.shape,
     { title: "View Payment History", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     async (input) => {
