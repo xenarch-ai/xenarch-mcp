@@ -6,6 +6,7 @@ export {
   createSigner,
   ensureConfigDir,
 } from "./config.js";
+export type { LoadConfigResult } from "./config.js";
 export {
   USDC_BASE,
   USDC_ABI,
