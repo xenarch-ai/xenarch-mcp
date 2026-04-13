@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.xenarch-ai/xenarch-mcp",
-  "description": "MCP server for AI agent payments. Check pricing, pay for x402-gated content and APIs with USDC on Base, and view payment history — non-custodial, no API keys required.",
+  "description": "Pay for x402-gated content and APIs with USDC micropayments on Base. Non-custodial.",
   "repository": {
     "url": "https://github.com/xenarch-ai/xenarch-mcp",
     "source": "github"
   },
-  "version": "0.1.3",
+  "version": "0.1.4",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@xenarch/agent-mcp",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "transport": {
         "type": "stdio"
       },
@@ -49,9 +49,10 @@
     {
       "registryType": "npm",
       "identifier": "@xenarch/agent-mcp",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "transport": {
-        "type": "streamablehttp"
+        "type": "streamable-http",
+        "url": "https://mcp.xenarch.dev/mcp"
       },
       "environmentVariables": [
         {
