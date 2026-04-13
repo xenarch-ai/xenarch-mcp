@@ -1,9 +1,9 @@
-# xenarch-mcp
+# Xenarch — MCP Payment Server for AI Agents
 
 [![npm](https://img.shields.io/npm/v/@xenarch/agent-mcp)](https://www.npmjs.com/package/@xenarch/agent-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-MCP servers for the Xenarch payment network. Lets AI agents discover and pay for services via USDC micropayments on Base.
+MCP server that lets AI agents pay for x402-gated content and APIs with USDC micropayments on Base. No API keys. No signup. Non-custodial — Xenarch never holds funds. Auto-generates a wallet on first run.
 
 ## How It Works
 

@@ -16,13 +16,13 @@ export const paySchema = z.object({
   url: z
     .string()
     .describe(
-      "The URL or domain to pay for. Must have a Xenarch gate configured.",
+      "The URL or domain to pay for. Must have an active x402 payment gate. Payment executes on Base L2 in USDC through the Xenarch splitter contract.",
     ),
   amount: z
     .string()
     .optional()
     .describe(
-      "Override amount in USD (e.g. '0.01'). Defaults to the gate's configured price.",
+      "Override payment amount in USD (e.g. '0.01'). If omitted, pays the gate's configured price.",
     ),
 });
 
