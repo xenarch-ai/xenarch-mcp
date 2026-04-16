@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.xenarch-ai/xenarch-mcp",
-  "description": "Xenarch is an x402 MCP server for AI agent payments — non-custodial, USDC on Base L2. Claude, Cursor, LangChain and CrewAI pay for HTTP 402–gated APIs and settle on-chain via an immutable splitter. 0% fee, 0.99% hard-capped. A pay-per-crawl alternative to Cloudflare. https://xenarch.com",
+  "description": "Xenarch — x402 MCP server for AI agent payments. Non-custodial, USDC on Base L2.",
   "repository": {
     "url": "https://github.com/xenarch-ai/xenarch-mcp",
     "source": "github"
   },
-  "version": "0.1.4",
+  "version": "0.1.5",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@xenarch/agent-mcp",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "transport": {
         "type": "stdio"
       },
@@ -49,7 +49,7 @@
     {
       "registryType": "npm",
       "identifier": "@xenarch/agent-mcp",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "transport": {
         "type": "streamable-http",
         "url": "https://mcp.xenarch.dev/mcp"
