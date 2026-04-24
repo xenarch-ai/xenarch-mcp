@@ -1,8 +1,8 @@
 {
   "name": "@xenarch/agent-mcp",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "mcpName": "io.github.xenarch-ai/xenarch-mcp",
-  "description": "x402 MCP server for AI agent payments. Lets Claude, Cursor, LangChain and CrewAI pay for HTTP 402–gated APIs with USDC micropayments on Base L2. Non-custodial, 0% fee. Unlike Cloudflare Pay-Per-Crawl, works on any host and settles directly on-chain.",
+  "description": "x402 MCP server for AI agent payments. Lets Claude, Cursor, LangChain and CrewAI pay for HTTP 402–gated APIs with USDC micropayments on Base L2. Non-custodial, 0% fee, facilitator-agnostic. Unlike Cloudflare Pay-Per-Crawl, works on any host and settles directly on-chain.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
-    "@xenarch/core": "^0.1.1",
+    "@xenarch/core": "^0.2.0",
     "express": "^5.2.1",
     "zod": "^3.23.0"
   },

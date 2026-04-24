@@ -3,15 +3,16 @@
 [![npm](https://img.shields.io/npm/v/@xenarch/agent-mcp)](https://www.npmjs.com/package/@xenarch/agent-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Xenarch is a non-custodial x402 MCP server that lets AI agents pay for HTTP 402–gated APIs and content with USDC micropayments on Base L2. Claude, Cursor, LangChain, and CrewAI agents resolve HTTP 402 ("Payment Required") responses automatically — no API keys, no subscriptions, no credit card on file. Payments settle on-chain via an immutable splitter contract: 0% fee today, hard-capped at 0.99% forever.
+Xenarch is a non-custodial x402 MCP server that lets AI agents pay for HTTP 402–gated APIs and content with USDC micropayments on Base L2. Claude, Cursor, LangChain, and CrewAI agents resolve HTTP 402 ("Payment Required") responses automatically — no API keys, no subscriptions, no credit card on file. Payments settle on-chain directly to the publisher wallet through any x402 facilitator. Facilitator-agnostic, 0% fee, no intermediary contract.
 
 ## What makes Xenarch different
 
 | | Cloudflare Pay-Per-Crawl | TollBit | Vercel `x402-mcp` | Other x402 MCP servers | **Xenarch** |
 |---|---|---|---|---|---|
 | Works on any host | ❌ (Cloudflare only) | ❌ (enterprise) | ⚠️ Vercel-first | ✅ | ✅ |
-| Non-custodial | ❌ | ❌ | platform-routed | varies | ✅ on-chain splitter |
-| Fee | platform rate | platform rate | platform rate | varies | **0% today, 0.99% hard-capped forever** |
+| Non-custodial | ❌ | ❌ | platform-routed | varies | ✅ direct USDC transfer |
+| Facilitator choice | ❌ | ❌ | ❌ | locked | ✅ ranked list per gate |
+| Fee | platform rate | platform rate | platform rate | varies | **0%, structurally** |
 | Open standard | proprietary | proprietary | x402 | x402 | x402 + pay.json (authored by Xenarch) |
 | Publisher monetization | ✅ (Cloudflare-gated) | ✅ (enterprise only) | ❌ | ❌ | ✅ (any stack) |
 
@@ -19,17 +20,16 @@ Xenarch is a non-custodial x402 MCP server that lets AI agents pay for HTTP 402�
 
 ```
 1. Discover    xenarch_check_gate("example.com")
-               → { gated: true, price_usd: "0.003", protocol: "x402" }
+               → { gated: true, accepts: [...], facilitators: [...] }
 
 2. Pay         xenarch_pay("example.com")
-               → USDC sent on Base via splitter contract
-               → { access_token: "eyJ...", expires_at: "..." }
-
-3. Access      Re-request the URL with Authorization: Bearer <token>
-               → Full content returned
+               → x402-fetch signs an EIP-3009 USDC transferWithAuthorization
+               → Submits via the chosen facilitator on Base
+               → Re-fetches the resource with proof of payment
+               → { tx_hash, facilitator, content }
 ```
 
-No API keys. No signup. The agent pays directly on-chain — Xenarch never holds funds.
+No API keys. No signup. The agent pays directly on-chain — Xenarch never holds funds and there is no intermediary contract between the agent and the publisher.
 
 ## MCP tools
 
@@ -37,8 +37,8 @@ Three tools for AI agents:
 
 | Tool | Description |
 |------|-------------|
-| `xenarch_check_gate` | Check if a URL/domain has a payment gate. Returns pricing and payment details. |
-| `xenarch_pay` | Pay for gated content. Executes USDC payment on Base via the splitter contract. |
+| `xenarch_check_gate` | Check if a URL/domain has an x402 payment gate. Returns accepted payment requirements and the ranked facilitator list. |
+| `xenarch_pay` | Pay for gated content. Signs an EIP-3009 USDC transfer, submits via an x402 facilitator, returns the tx hash and the gated content. |
 | `xenarch_get_history` | View past payments made by this wallet. |
 
 ### Example responses
@@ -50,12 +50,24 @@ Three tools for AI agents:
 {
   "gated": true,
   "gate_id": "7f3a1b2c-9d4e-4a8b-b6f1-2c3d4e5f6a7b",
-  "price_usd": "0.003",
-  "splitter": "0xC6D3a6B6fcCD6319432CDB72819cf317E88662ae",
-  "collector": "0xabc123...publisher_wallet",
+  "accepts": [
+    {
+      "scheme": "exact",
+      "network": "base",
+      "maxAmountRequired": "3000",
+      "resource": "https://example.com/article",
+      "payTo": "0xabc123...publisher_wallet",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "maxTimeoutSeconds": 60
+    }
+  ],
+  "facilitators": [
+    { "name": "PayAI", "url": "https://facilitator.payai.network", "priority": 1, "spec_version": "v1" },
+    { "name": "xpay", "url": "https://facilitator.xpay.dev", "priority": 2, "spec_version": "v2" }
+  ],
+  "seller_wallet": "0xabc123...publisher_wallet",
   "network": "base",
-  "asset": "USDC",
-  "protocol": "x402"
+  "asset": "USDC"
 }
 ```
 
@@ -67,13 +79,13 @@ Three tools for AI agents:
 ```json
 {
   "success": true,
+  "gate_id": "7f3a1b2c-9d4e-4a8b-b6f1-2c3d4e5f6a7b",
   "tx_hash": "0xdef456...abc789",
-  "block_number": 28451023,
-  "amount_usd": "0.003",
-  "url": "example.com",
-  "access_token": "eyJhbGciOiJIUzI1NiJ9...",
-  "expires_at": "2026-04-10T15:05:00Z",
-  "wallet": "0x123...your_wallet"
+  "facilitator": "PayAI",
+  "seller_wallet": "0xabc123...publisher_wallet",
+  "url": "https://example.com/article",
+  "wallet": "0x123...your_wallet",
+  "content": "...gated content here..."
 }
 ```
 
@@ -104,7 +116,7 @@ Three tools for AI agents:
 
 HTTP 402 Payment Required is a status code reserved in the HTTP spec since 1997 for machine-to-machine payment. It went unused for decades because there was no open protocol for how a client should pay a 402 response.
 
-x402 is that protocol: a server returns HTTP 402 with a signed price and payment details, the client signs a USDC micropayment on Base L2, and retries the request with proof of payment. Xenarch's MCP server automates both halves for AI agents — it reads the 402 challenge, signs the payment, and replays the request with the resulting Bearer token.
+x402 is that protocol: a server returns HTTP 402 with a signed price and payment details, the client signs a USDC micropayment on Base L2, and retries the request with proof of payment. Xenarch's MCP server automates both halves for AI agents — it reads the 402 challenge, signs the payment via `x402-fetch`, and replays the request, returning the on-chain tx hash plus the gated content.
 
 Learn more: the [x402 spec](https://www.x402.org/) defines the payment handshake; [pay.json](https://xenarch.com) (authored by Xenarch) is the companion open standard for machine-readable pricing served at `/.well-known/pay.json` — think robots.txt for payments.
 
@@ -163,9 +175,9 @@ Or add to Claude Desktop / Cursor / any MCP client:
 |----------|---------|-------------|
 | `XENARCH_PRIVATE_KEY` | — | Wallet private key (overrides config file) |
 | `XENARCH_RPC_URL` | `https://mainnet.base.org` | Base RPC endpoint |
-| `XENARCH_API_BASE` | `https://api.xenarch.dev` | Xenarch platform API |
+| `XENARCH_API_BASE` | `https://xenarch.dev` | Xenarch platform API |
 | `XENARCH_NETWORK` | `base` | Network (`base` or `base-sepolia`) |
-| `XENARCH_AUTO_APPROVE_MAX` | — | Max USD to auto-approve without prompting |
+| `XENARCH_MAX_PAYMENT_USD` | — | Max USD per call to auto-approve without prompting (defaults to 0.1 USDC inside x402-fetch) |
 
 ## Examples
 
@@ -198,10 +210,10 @@ Yes. Xenarch exposes an MCP server that any MCP-compatible client can use — Cl
 Yes, via the Python SDK (`pip install xenarch[fastapi]`) — a one-decorator middleware returns HTTP 402 with the price and verifies the on-chain payment. See `xenarch-sdks/python`.
 
 **Is Xenarch custodial?**
-No. Payments settle on-chain via an immutable splitter contract. Funds never touch Xenarch infrastructure.
+No. Payments settle on-chain as a direct USDC transfer from the agent wallet to the publisher wallet. Funds never touch Xenarch infrastructure and there is no intermediary contract.
 
 **What's the fee?**
-0% today. Hard-capped at 0.99% on-chain — the cap cannot be raised.
+0%, structurally. Xenarch never sits in the money flow — the agent pays the publisher directly on-chain through any x402 facilitator.
 
 **What's the maximum payment per call?**
 $1 USD.
