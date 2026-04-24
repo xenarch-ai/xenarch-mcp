@@ -1,6 +1,6 @@
 {
   "name": "@xenarch/core",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,12 +9,13 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "ethers": "^6.13.0"
+    "viem": "^2.21.26",
+    "x402-fetch": "^1.2.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0"
   },
-  "keywords": ["xenarch", "x402", "micropayments", "usdc"],
+  "keywords": ["xenarch", "x402", "micropayments", "usdc", "facilitator"],
   "license": "MIT",
   "repository": {
     "type": "git",
