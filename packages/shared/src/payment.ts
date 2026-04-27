@@ -1,75 +1,80 @@
-import { ethers } from "ethers";
-import type { GateResponse, PaymentResult } from "./types.js";
-import { USDC_ABI, SPLITTER_ABI } from "./types.js";
+import { createWalletClient, http, type WalletClient } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { base, baseSepolia } from "viem/chains";
+import { wrapFetchWithPayment } from "x402-fetch";
+import type { GateResponse, PaymentResult, XenarchConfig } from "./types.js";
 
-/**
- * Execute a USDC payment through the Xenarch splitter contract.
- * Flow: check balance → check gas → approve USDC → call split()
- */
-export async function executePayment(
-  gate: GateResponse,
-  signer: ethers.Signer,
-  usdcAddress: string,
-): Promise<PaymentResult> {
-  const address = await signer.getAddress();
-  const provider = signer.provider!;
-
-  const usdc = new ethers.Contract(usdcAddress, USDC_ABI, signer);
-  const splitter = new ethers.Contract(gate.splitter, SPLITTER_ABI, signer);
-
-  // USDC has 6 decimals
-  const amount = ethers.parseUnits(gate.price_usd, 6);
-
-  // 1. Check balance
-  const balance = (await usdc.balanceOf(address)) as bigint;
-  if (balance < amount) {
-    throw new Error(
-      `Insufficient USDC. Have ${ethers.formatUnits(balance, 6)}, need ${gate.price_usd}`,
-    );
-  }
-
-  // 2. Check ETH for gas
-  const ethBalance = await provider.getBalance(address);
-  if (ethBalance === 0n) {
-    throw new Error(
-      "No ETH for gas. Send some ETH (Base) to your wallet to cover transaction fees.",
-    );
-  }
-
-  // 3. Check and set allowance — approve max to avoid repeated approvals
-  const allowance = (await usdc.allowance(address, gate.splitter)) as bigint;
-  if (allowance < amount) {
-    const approveTx = await usdc.approve(gate.splitter, ethers.MaxUint256);
-    await approveTx.wait(2);
-  }
-
-  // 4. Call split
-  const splitTx = await splitter.split(gate.collector, amount);
-  const receipt = await splitTx.wait(1);
-
-  return {
-    txHash: receipt.hash,
-    blockNumber: receipt.blockNumber,
-  };
+function buildWalletClient(config: XenarchConfig): WalletClient {
+  const account = privateKeyToAccount(config.privateKey as `0x${string}`);
+  const chain = config.network === "base-sepolia" ? baseSepolia : base;
+  return createWalletClient({
+    account,
+    chain,
+    transport: http(config.rpcUrl),
+  });
 }
 
 /**
- * Verify a payment with the Xenarch platform and get an access token.
+ * Make a paid HTTP request to a 402-gated URL.
+ *
+ * Wraps the native fetch with x402-fetch, which signs an EIP-3009
+ * `transferWithAuthorization` for USDC and submits it through the facilitator
+ * named in the 402 response. Settles as a generic USDC
+ * `Transfer(from=payer, to=payTo, value=maxAmountRequired)` event on Base.
+ * Non-custodial — no intermediary contract.
  */
-export async function verifyPayment(
-  verifyUrl: string,
-  txHash: string,
-): Promise<{ access_token: string; expires_at: string }> {
-  const res = await fetch(verifyUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tx_hash: txHash }),
-  });
+export async function payAndFetch(
+  url: string,
+  config: XenarchConfig,
+  gate: GateResponse,
+): Promise<{ response: Response; result: PaymentResult }> {
+  const client = buildWalletClient(config);
 
-  if (!res.ok) {
-    const msg = await res.text().catch(() => res.statusText);
-    throw new Error(`Payment verification failed: ${msg}`);
+  const maxBaseUnits = config.maxPaymentUsd
+    ? BigInt(Math.round(config.maxPaymentUsd * 1_000_000))
+    : undefined;
+
+  const fetchWithPay = wrapFetchWithPayment(
+    fetch,
+    // viem WalletClient is structurally compatible with x402's wallet interface
+    client as unknown as Parameters<typeof wrapFetchWithPayment>[1],
+    maxBaseUnits,
+  );
+
+  const response = await fetchWithPay(url, { method: "GET" });
+
+  if (!response.ok) {
+    const msg = await response.text().catch(() => response.statusText);
+    throw new Error(`Paid fetch failed: ${response.status} ${msg}`);
   }
 
-  return (await res.json()) as { access_token: string; expires_at: string };
+  // x402-fetch surfaces the chosen facilitator in the X-PAYMENT-RESPONSE
+  // header. Echo the gate's first facilitator if absent.
+  const facilitator =
+    response.headers.get("x-payment-response") ??
+    gate.facilitators[0]?.name ??
+    "unknown";
+
+  // tx_hash extraction: x402-fetch v1 puts settlement details in
+  // X-PAYMENT-RESPONSE header (base64-encoded JSON). Best-effort decode.
+  let txHash = "";
+  const rawHeader = response.headers.get("x-payment-response");
+  if (rawHeader) {
+    try {
+      const decoded = JSON.parse(
+        Buffer.from(rawHeader, "base64").toString("utf-8"),
+      );
+      txHash = decoded.transaction ?? decoded.tx_hash ?? "";
+    } catch {
+      // header not base64-JSON; leave txHash empty and rely on platform verify
+    }
+  }
+
+  return {
+    response,
+    result: {
+      txHash,
+      facilitator,
+    },
+  };
 }

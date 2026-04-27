@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile, chmod } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { ethers } from "ethers";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type { XenarchConfig } from "./types.js";
 import { DEFAULT_CONFIG } from "./types.js";
 
@@ -21,7 +21,6 @@ export interface LoadConfigResult {
 export async function loadConfig(): Promise<LoadConfigResult> {
   let config: Partial<XenarchConfig> = {};
 
-  // Read config file
   try {
     const raw = await readFile(CONFIG_FILE, "utf-8");
     config = JSON.parse(raw);
@@ -29,7 +28,6 @@ export async function loadConfig(): Promise<LoadConfigResult> {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
 
-  // Read wallet file if no private key in config
   if (!config.privateKey) {
     try {
       const raw = await readFile(WALLET_FILE, "utf-8");
@@ -40,7 +38,6 @@ export async function loadConfig(): Promise<LoadConfigResult> {
     }
   }
 
-  // Override from environment variables
   if (process.env.XENARCH_PRIVATE_KEY) {
     config.privateKey = process.env.XENARCH_PRIVATE_KEY;
   }
@@ -53,14 +50,13 @@ export async function loadConfig(): Promise<LoadConfigResult> {
   if (process.env.XENARCH_NETWORK) {
     config.network = process.env.XENARCH_NETWORK as "base" | "base-sepolia";
   }
-  if (process.env.XENARCH_AUTO_APPROVE_MAX) {
-    config.autoApproveMaxUsd = parseFloat(process.env.XENARCH_AUTO_APPROVE_MAX);
+  if (process.env.XENARCH_MAX_PAYMENT_USD) {
+    config.maxPaymentUsd = parseFloat(process.env.XENARCH_MAX_PAYMENT_USD);
   }
 
   let walletCreated: { address: string } | undefined;
 
   if (!config.privateKey) {
-    // Auto-generate wallet on first use
     const { address, privateKey } = await generateWallet();
     config.privateKey = privateKey;
     walletCreated = { address };
@@ -84,22 +80,23 @@ export async function generateWallet(): Promise<{
   address: string;
   privateKey: string;
 }> {
-  const wallet = ethers.Wallet.createRandom();
+  const privateKey = generatePrivateKey();
+  const account = privateKeyToAccount(privateKey);
   await ensureConfigDir();
   await writeFile(
     WALLET_FILE,
-    JSON.stringify(
-      { privateKey: wallet.privateKey, address: wallet.address },
-      null,
-      2,
-    ),
+    JSON.stringify({ privateKey, address: account.address }, null, 2),
     { mode: 0o600 },
   );
   await chmod(WALLET_FILE, 0o600);
-  return { address: wallet.address, privateKey: wallet.privateKey };
+  return { address: account.address, privateKey };
 }
 
-export function createSigner(config: XenarchConfig): ethers.Wallet {
-  const provider = new ethers.JsonRpcProvider(config.rpcUrl);
-  return new ethers.Wallet(config.privateKey, provider);
+/**
+ * Get the wallet address derived from the configured private key.
+ * Replaces the old `createSigner()` ethers helper — payment signing is
+ * now handled inside `payAndFetch` via viem + x402-fetch.
+ */
+export function getWalletAddress(config: XenarchConfig): string {
+  return privateKeyToAccount(config.privateKey as `0x${string}`).address;
 }

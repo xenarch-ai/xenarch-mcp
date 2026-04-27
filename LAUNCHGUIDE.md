@@ -16,7 +16,7 @@ x402 MCP server that lets AI agents pay for HTTP 402–gated content and APIs wi
 
 ## Full description
 
-Xenarch is a non-custodial x402 MCP server. It lets AI agents — Claude, Cursor, LangChain, CrewAI, or any MCP client — resolve HTTP 402 ("Payment Required") responses automatically by signing USDC micropayments on Base L2 (up to $1 per call). Publishers get paid directly through an immutable on-chain splitter contract: 0% fee today, hard-capped at 0.99% forever. Unlike Cloudflare Pay-Per-Crawl, Xenarch works on any host and is fully non-custodial. HTTP 402 has been reserved in the HTTP spec since 1997 — x402 is the open protocol that finally uses it.
+Xenarch is a non-custodial, facilitator-agnostic x402 MCP server. It lets AI agents — Claude, Cursor, LangChain, CrewAI, or any MCP client — resolve HTTP 402 ("Payment Required") responses automatically by signing USDC micropayments on Base L2 (up to $1 per call). Publishers get paid directly on-chain — the agent transfers USDC straight to the publisher wallet through any x402 facilitator chosen from the gate's ranked list. 0% fee, no intermediary contract. Unlike Cloudflare Pay-Per-Crawl, Xenarch works on any host and is fully non-custodial. HTTP 402 has been reserved in the HTTP spec since 1997 — x402 is the open protocol that finally uses it.
 
 Docs & install: https://xenarch.com
 
@@ -57,16 +57,17 @@ MIT
 
 ## Tools exposed
 
-- `xenarch_check_gate` — Check if a URL or domain has an x402 payment gate.
-- `xenarch_pay` — Pay for gated content with USDC on Base via the splitter contract. Returns a Bearer access token.
+- `xenarch_check_gate` — Check if a URL or domain has an x402 payment gate. Returns price, accepted payment requirements, and ranked facilitator list.
+- `xenarch_pay` — Pay an x402-gated URL with USDC on Base, signed via EIP-3009 transferWithAuthorization, submitted through a chosen facilitator. Returns the on-chain tx hash and the gated content.
 - `xenarch_get_history` — List past payments by this wallet.
 
 ## Environment variables
 
 - `XENARCH_PRIVATE_KEY` — wallet private key (optional; auto-generates on first run)
 - `XENARCH_RPC_URL` — Base RPC endpoint (default `https://mainnet.base.org`)
+- `XENARCH_API_BASE` — Xenarch platform API (default `https://xenarch.dev`)
 - `XENARCH_NETWORK` — `base` or `base-sepolia` (default `base`)
-- `XENARCH_AUTO_APPROVE_MAX` — max USD to auto-approve without prompting
+- `XENARCH_MAX_PAYMENT_USD` — max USD per call to auto-approve without prompting
 
 ## Maintainers
 
