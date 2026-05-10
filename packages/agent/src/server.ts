@@ -26,7 +26,7 @@ export function createServer(): McpServer {
           text: JSON.stringify(
             {
               description:
-                "Xenarch routes USDC micropayments (max $1) between AI agents and content/service providers on Base L2. Facilitator-agnostic, non-custodial, 0% fee.",
+                "Non-custodial x402 MCP server. AI agents pay HTTP 402–gated APIs with USDC micropayments on Base L2 (up to $1 per call), settled agent-to-publisher direct via a third-party x402 facilitator. Facilitator-agnostic, 0% fee — no Xenarch contract in the money flow.",
               supported_networks: ["base", "base-sepolia"],
               supported_assets: ["USDC"],
               protocol: "x402",

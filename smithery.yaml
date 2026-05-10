@@ -1,3 +1,9 @@
+description: |
+  Non-custodial x402 MCP server for AI agents. Lets Claude, Cursor, LangChain and CrewAI pay for HTTP 402–gated APIs with USDC micropayments on Base L2. Unlike Cloudflare Pay-Per-Crawl, works on any host and settles agent-to-publisher direct.
+homepage: https://xenarch.com
+# TODO: Smithery YAML schema does not document a top-level `tags` or `keywords` field
+# (the canonical source is `smithery.json`/dashboard). Tag list lives in package.json
+# keywords (§4.7) until Smithery confirms a yaml-level field exists.
 startCommand:
   type: http
   configSchema:

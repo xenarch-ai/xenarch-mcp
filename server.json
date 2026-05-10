@@ -2,16 +2,17 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.xenarch-ai/xenarch-mcp",
   "description": "Xenarch — x402 MCP server for AI agent payments. Non-custodial, USDC on Base L2.",
+  "websiteUrl": "https://xenarch.com",
   "repository": {
     "url": "https://github.com/xenarch-ai/xenarch-mcp",
     "source": "github"
   },
-  "version": "0.2.0",
+  "version": "0.2.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@xenarch/agent-mcp",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "transport": {
         "type": "stdio"
       },
@@ -49,7 +50,7 @@
     {
       "registryType": "npm",
       "identifier": "@xenarch/agent-mcp",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "transport": {
         "type": "streamable-http",
         "url": "https://mcp.xenarch.dev/mcp"
