@@ -26,15 +26,15 @@ export function createServer(): McpServer {
           text: JSON.stringify(
             {
               description:
-                "Non-custodial x402 MCP server. AI agents pay HTTP 402–gated APIs with USDC micropayments on Base L2 (up to $1 per call), settled agent-to-publisher direct via a third-party x402 facilitator. Facilitator-agnostic, 0% fee — no Xenarch contract in the money flow.",
+                "Non-custodial x402 MCP server. AI agents pay HTTP 402–gated APIs with USDC micropayments on Base L2 (up to $1 per call), settled agent-to-publisher direct on-chain. 0% Xenarch fee — no Xenarch contract in the money flow. The agent wallet only ever holds USDC; no ETH or other gas coin needed.",
               supported_networks: ["base", "base-sepolia"],
               supported_assets: ["USDC"],
               protocol: "x402",
               max_payment_usd: 1.0,
               flow: [
                 "1. Agent calls xenarch_check_gate to discover if a URL has an x402 payment gate",
-                "2. Gate returns price, accepted payment requirements, and a ranked list of x402 facilitators that can settle the payment",
-                "3. Agent calls xenarch_pay — it signs an EIP-3009 USDC transferWithAuthorization, submits via the chosen facilitator, and re-fetches the gated content",
+                "2. Gate returns price, accepted payment requirements, seller wallet, network and asset",
+                "3. Agent calls xenarch_pay — it signs an EIP-3009 USDC transferWithAuthorization, settles on-chain, and re-fetches the gated content",
                 "4. Tool returns the on-chain tx_hash plus the gated content",
               ],
             },
@@ -78,9 +78,9 @@ export function createServer(): McpServer {
     const addr = configResult.walletCreated.address;
     const notice =
       `A new Xenarch wallet was just created: ${addr}\n` +
-      `It has no funds yet. To make payments, the user needs to send USDC and a small amount of ETH (for gas) to this address on Base.\n` +
+      `It has no funds yet. To make payments, the user needs to send USDC to this address on Base. USDC is the only token required — no ETH or other gas coin needed.\n` +
       `Wallet saved to ~/.xenarch/wallet.json\n` +
-      `IMPORTANT: Tell the user about this new wallet and that they need to fund it before payments will work.`;
+      `IMPORTANT: Tell the user about this new wallet and that they need to fund it with USDC before payments will work.`;
     configResult.walletCreated = undefined;
     return notice;
   }
@@ -95,7 +95,7 @@ export function createServer(): McpServer {
 
   server.tool(
     "xenarch_check_gate",
-    "Check if a URL or domain has an x402 payment gate. Returns gate status, accepted payment requirements (price, asset, network), seller wallet, and a ranked list of x402 facilitators that can settle the payment. Use this before paying to confirm pricing, when a URL returns HTTP 402 Payment Required, or when a user asks whether content is paywalled.",
+    "Check if a URL or domain has an x402 payment gate. Returns gate status, accepted payment requirements (price, asset, network), and the seller wallet. Use this before paying to confirm pricing, when a URL returns HTTP 402 Payment Required, or when a user asks whether content is paywalled.",
     checkGateSchema.shape,
     {
       title: "Check Payment Gate",
@@ -129,7 +129,7 @@ export function createServer(): McpServer {
 
   server.tool(
     "xenarch_pay",
-    "Pay an x402-gated URL with USDC on Base L2 and return the gated content. Signs an EIP-3009 transferWithAuthorization, submits it via an x402 facilitator chosen from the gate's ranked list, then re-fetches the resource with proof of payment. Returns the on-chain tx_hash, chosen facilitator, seller wallet, and the response body. Settles directly to the seller wallet — no intermediary contract, no custodial balance. Use after xenarch_check_gate confirms a gate exists, or when the user asks to pay for or unlock gated content.",
+    "Pay an x402-gated URL with USDC on Base L2 and return the gated content. Signs an EIP-3009 transferWithAuthorization, settles on-chain, then re-fetches the resource with proof of payment. Returns the on-chain tx_hash, seller wallet, and the response body. Settles directly to the seller wallet — no Xenarch contract in the money flow, no custodial balance. The agent wallet only ever holds USDC; no ETH or other gas coin is required. Use after xenarch_check_gate confirms a gate exists, or when the user asks to pay for or unlock gated content.",
     paySchema.shape,
     {
       title: "Pay for Content",

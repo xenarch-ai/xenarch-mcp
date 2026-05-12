@@ -2,5 +2,5 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "maintainers": ["mihneadevries", "A-Xen"],
   "name": "Xenarch",
-  "description": "Xenarch is an x402 MCP server for AI agent payments — non-custodial, facilitator-agnostic, with USDC micropayments on Base L2. Claude, Cursor and any MCP client pay for HTTP 402–gated content on-chain through any x402 facilitator. 0% fee, no intermediary contract."
+  "description": "Xenarch is an x402 MCP server for AI agent payments — non-custodial, USDC micropayments on Base L2. Claude, Cursor and any MCP client pay for HTTP 402–gated content on-chain, agent wallet to publisher wallet direct. The agent wallet never needs ETH — USDC is the only token it ever holds. 0% Xenarch fee, no Xenarch contract in the money flow."
 }

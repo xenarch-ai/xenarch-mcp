@@ -12,7 +12,7 @@ export const paySchema = z.object({
   url: z
     .string()
     .describe(
-      "The URL or domain to pay for. Must have an active x402 payment gate. Payment settles in USDC on Base L2 through any x402 facilitator chosen from the gate's ranked list.",
+      "The URL or domain to pay for. Must have an active x402 payment gate. Payment settles in USDC on Base L2, agent wallet to seller wallet direct. The agent wallet only ever holds USDC; no ETH or other gas coin needed.",
     ),
 });
 
@@ -48,8 +48,9 @@ export async function pay(input: PayInput, config: XenarchConfig) {
     resourceUrl = url;
   }
 
-  // Sign + submit the payment via the chosen facilitator and re-fetch the
-  // resource. Returns the response body as text so the caller can use it.
+  // Sign the EIP-3009 USDC transfer authorization, submit the payment, and
+  // re-fetch the resource. Returns the response body as text so the caller
+  // can use it.
   const { response, result } = await payAndFetch(resourceUrl, config, gate);
   const contentType = response.headers.get("content-type") ?? "";
   const body = contentType.includes("application/json")

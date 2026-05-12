@@ -3,33 +3,33 @@
 [![npm](https://img.shields.io/npm/v/@xenarch/agent-mcp)](https://www.npmjs.com/package/@xenarch/agent-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Xenarch is a non-custodial x402 MCP server that lets AI agents pay for HTTP 402–gated APIs and content with USDC micropayments on Base L2. Claude, Cursor, LangChain, and CrewAI agents resolve HTTP 402 ("Payment Required") responses automatically — no API keys, no subscriptions, no credit card on file. Payments settle on-chain directly to the publisher wallet through any x402 facilitator. Facilitator-agnostic, 0% fee, no intermediary contract.
+Xenarch is a non-custodial x402 MCP server. AI agents — Claude, Cursor, LangChain, CrewAI — pay for HTTP 402–gated APIs and content with USDC micropayments on Base L2. No API keys, no subscriptions, no credit card on file. The agent wallet never needs ETH; USDC is the only token it ever holds. Payments settle on-chain: agent wallet → publisher wallet, direct. 0% Xenarch fee — there's no Xenarch contract in the money flow.
 
 ## What makes Xenarch different
 
 | | Cloudflare Pay-Per-Crawl | TollBit | Vercel `x402-mcp` | Other x402 MCP servers | **Xenarch** |
 |---|---|---|---|---|---|
-| Works on any host | ❌ (Cloudflare only) | ❌ (enterprise) | ⚠️ Vercel-first | ✅ | ✅ |
-| Non-custodial | ❌ | ❌ | platform-routed | varies | ✅ direct USDC transfer |
-| Facilitator choice | ❌ | ❌ | ❌ | locked | ✅ ranked list per gate |
+| Works on any host | ✗ (Cloudflare only) | ✗ (enterprise) | Vercel-first | ✓ | ✓ |
+| Non-custodial | ✗ | ✗ | platform-routed | varies | ✓ direct USDC transfer |
+| Agent needs ETH | n/a | n/a | varies | varies | ✓ never |
 | Fee | platform rate | platform rate | platform rate | varies | **0%, structurally** |
 | Open standard | proprietary | proprietary | x402 | x402 | x402 + pay.json (authored by Xenarch) |
-| Publisher monetization | ✅ (Cloudflare-gated) | ✅ (enterprise only) | ❌ | ❌ | ✅ (any stack) |
+| Publisher monetization | ✓ (Cloudflare-gated) | ✓ (enterprise only) | ✗ | ✗ | ✓ (any stack) |
 
 ## How it works
 
 ```
 1. Discover    xenarch_check_gate("example.com")
-               → { gated: true, accepts: [...], facilitators: [...] }
+               → { gated: true, accepts: [...] }
 
 2. Pay         xenarch_pay("example.com")
                → x402-fetch signs an EIP-3009 USDC transferWithAuthorization
-               → Submits via the chosen facilitator on Base
+               → Settlement goes on-chain
                → Re-fetches the resource with proof of payment
-               → { tx_hash, facilitator, content }
+               → { tx_hash, content }
 ```
 
-No API keys. No signup. The agent pays directly on-chain — Xenarch never holds funds and there is no intermediary contract between the agent and the publisher.
+No API keys. No signup. The agent wallet only ever needs USDC — no ETH, no gas coin of any kind. Xenarch never holds funds and there is no Xenarch contract between the agent and the publisher.
 
 ## MCP tools
 
@@ -37,8 +37,8 @@ Three tools for AI agents:
 
 | Tool | Description |
 |------|-------------|
-| `xenarch_check_gate` | Check if a URL/domain has an x402 payment gate. Returns accepted payment requirements and the ranked facilitator list. |
-| `xenarch_pay` | Pay for gated content. Signs an EIP-3009 USDC transfer, submits via an x402 facilitator, returns the tx hash and the gated content. |
+| `xenarch_check_gate` | Check if a URL/domain has an x402 payment gate. Returns the accepted payment requirements — price, asset, network, seller wallet. |
+| `xenarch_pay` | Pay for gated content. Signs an EIP-3009 USDC transfer, settles on-chain, returns the tx hash and the gated content. |
 | `xenarch_get_history` | View past payments made by this wallet. |
 
 ### Example responses
@@ -61,10 +61,6 @@ Three tools for AI agents:
       "maxTimeoutSeconds": 60
     }
   ],
-  "facilitators": [
-    { "name": "PayAI", "url": "https://facilitator.payai.network", "priority": 1, "spec_version": "v1" },
-    { "name": "xpay", "url": "https://facilitator.xpay.dev", "priority": 2, "spec_version": "v2" }
-  ],
   "seller_wallet": "0xabc123...publisher_wallet",
   "network": "base",
   "asset": "USDC"
@@ -81,7 +77,6 @@ Three tools for AI agents:
   "success": true,
   "gate_id": "7f3a1b2c-9d4e-4a8b-b6f1-2c3d4e5f6a7b",
   "tx_hash": "0xdef456...abc789",
-  "facilitator": "PayAI",
   "seller_wallet": "0xabc123...publisher_wallet",
   "url": "https://example.com/article",
   "wallet": "0x123...your_wallet",
@@ -169,6 +164,8 @@ Or add to Claude Desktop / Cursor / any MCP client:
 }
 ```
 
+3. Fund the wallet with USDC on Base. That's it — no ETH, no other token needed.
+
 ## Environment variables
 
 | Variable | Default | Description |
@@ -210,10 +207,13 @@ Yes. Xenarch exposes an MCP server that any MCP-compatible client can use — Cl
 Yes, via the Python SDK (`pip install xenarch[fastapi]`) — a one-decorator middleware returns HTTP 402 with the price and verifies the on-chain payment. See `xenarch-sdks/python`.
 
 **Is Xenarch custodial?**
-No. Payments settle on-chain as a direct USDC transfer from the agent wallet to the publisher wallet. Funds never touch Xenarch infrastructure and there is no intermediary contract.
+No. Payments settle on-chain as a direct USDC transfer from the agent wallet to the publisher wallet. Funds never touch Xenarch infrastructure and there is no Xenarch contract in the money flow.
+
+**Does the agent need ETH for gas?**
+No. USDC is the only token the agent wallet ever needs. Fund it with USDC and you're done — no ETH, no other gas coin.
 
 **What's the fee?**
-0%, structurally. Xenarch never sits in the money flow — the agent pays the publisher directly on-chain through any x402 facilitator.
+0%, structurally. Xenarch never sits in the money flow — there's no Xenarch contract that could charge a fee.
 
 **What's the maximum payment per call?**
 $1 USD.
