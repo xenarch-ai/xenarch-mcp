@@ -3,18 +3,18 @@
 [![npm](https://img.shields.io/npm/v/@xenarch/agent-mcp)](https://www.npmjs.com/package/@xenarch/agent-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Xenarch is a non-custodial x402 MCP server. AI agents — Claude, Cursor, LangChain, CrewAI — pay for HTTP 402–gated APIs and content with USDC micropayments on Base L2. No API keys, no subscriptions, no credit card on file. The agent wallet never needs ETH; USDC is the only token it ever holds. Payments settle on-chain: agent wallet → publisher wallet, direct. 0% Xenarch fee — there's no Xenarch contract in the money flow.
+Xenarch is a non-custodial x402 MCP server. AI agents — Claude, Cursor, LangChain, CrewAI — pay for HTTP 402—gated APIs and content with USDC micropayments on Base L2. No API keys, no subscriptions, no credit card on file. The agent wallet never needs ETH; USDC is the only token it ever holds. Payments settle on-chain: agent wallet → publisher wallet, direct. 0% Xenarch fee — there's no Xenarch contract in the money flow.
 
 ## What makes Xenarch different
 
-| | Cloudflare Pay-Per-Crawl | TollBit | Vercel `x402-mcp` | Other x402 MCP servers | **Xenarch** |
-|---|---|---|---|---|---|
-| Works on any host | ✗ (Cloudflare only) | ✗ (enterprise) | Vercel-first | ✓ | ✓ |
-| Non-custodial | ✗ | ✗ | platform-routed | varies | ✓ direct USDC transfer |
-| Agent needs ETH | n/a | n/a | varies | varies | ✓ never |
-| Fee | platform rate | platform rate | platform rate | varies | **0%, structurally** |
-| Open standard | proprietary | proprietary | x402 | x402 | x402 + pay.json (authored by Xenarch) |
-| Publisher monetization | ✓ (Cloudflare-gated) | ✓ (enterprise only) | ✗ | ✗ | ✓ (any stack) |
+| | Cloudflare Pay-Per-Crawl | Stripe | TollBit | Vercel `x402-mcp` | Other x402 MCP servers | **Xenarch** |
+|---|---|---|---|---|---|---|
+| Works on any host | × (Cloudflare only) | ✓ | × (enterprise) | Vercel-first | ✓ | ✓ |
+| Non-custodial | × | × | × | platform-routed | varies | ✓ direct USDC transfer |
+| Agent needs ETH | n/a | n/a | n/a | varies | varies | ✓ never |
+| Fee | platform rate | 2.9% + $0.30 | platform rate | platform rate | varies | **0%, structurally** |
+| Open standard | proprietary | proprietary | proprietary | x402 | x402 | x402 + pay.json (authored by Xenarch) |
+| Publisher monetization | ✓ (Cloudflare-gated) | ✓ (any stack) | ✓ (enterprise only) | × | × | ✓ (any stack) |
 
 ## How it works
 

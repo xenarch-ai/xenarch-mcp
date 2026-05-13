@@ -4,13 +4,13 @@ Xenarch is a non-custodial x402 MCP server that gives any AI agent a wallet and 
 
 ## What makes Xenarch different
 
-| | Cloudflare Pay-Per-Crawl | TollBit | Xenarch |
-|---|---|---|---|
-| Works on any host | ✗ (Cloudflare only) | ✗ (enterprise) | ✓ |
-| Non-custodial | ✗ | ✗ | ✓ (agent-to-publisher direct, no Xenarch contract) |
-| Agent needs ETH | n/a | n/a | ✓ never |
-| Fee | Platform rate | Platform rate | **0% — no Xenarch contract that *can* charge a fee** |
-| Open standard | proprietary | proprietary | x402 + pay.json (open) |
+| | Cloudflare Pay-Per-Crawl | Stripe | TollBit | Xenarch |
+|---|---|---|---|---|
+| Works on any host | × (Cloudflare only) | ✓ | × (enterprise) | ✓ |
+| Non-custodial | × | × | × | ✓ (agent-to-publisher direct, no Xenarch contract) |
+| Agent needs ETH | n/a | n/a | n/a | ✓ never |
+| Fee | Platform rate | 2.9% + $0.30 | Platform rate | **0% — no Xenarch contract that *can* charge a fee** |
+| Open standard | proprietary | proprietary | proprietary | x402 + pay.json (open) |
 
 ## Native in
 Claude Code, Claude.ai (via MCP), Cursor, Cline, LangChain, CrewAI, and any MCP-compatible client.
