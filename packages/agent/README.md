@@ -1,13 +1,14 @@
 # Xenarch — non-custodial x402 MCP server for AI agent payments
 
-Xenarch is a non-custodial x402 MCP server that gives any AI agent a wallet and lets it resolve HTTP 402 ("Payment Required") responses automatically. When a site, API, or tool returns HTTP 402 with an x402 challenge, the agent signs a USDC micropayment on Base L2 (up to $1 per call) and retries — no API keys, no subscriptions, no credit card on file.
+Xenarch is a non-custodial x402 MCP server that gives any AI agent a wallet and lets it resolve HTTP 402 ("Payment Required") responses automatically. When a site, API, or tool returns HTTP 402 with an x402 challenge, the agent signs a USDC micropayment on Base L2 (up to $1 per call) and retries — no API keys, no subscriptions, no credit card on file. The agent wallet only ever needs USDC — no ETH, no gas coin of any kind.
 
 ## What makes Xenarch different
 
 | | Cloudflare Pay-Per-Crawl | TollBit | Xenarch |
 |---|---|---|---|
-| Works on any host | ❌ (Cloudflare only) | ❌ (enterprise) | ✅ |
-| Non-custodial | ❌ | ❌ | ✅ (agent-to-publisher direct, no Xenarch contract) |
+| Works on any host | ✗ (Cloudflare only) | ✗ (enterprise) | ✓ |
+| Non-custodial | ✗ | ✗ | ✓ (agent-to-publisher direct, no Xenarch contract) |
+| Agent needs ETH | n/a | n/a | ✓ never |
 | Fee | Platform rate | Platform rate | **0% — no Xenarch contract that *can* charge a fee** |
 | Open standard | proprietary | proprietary | x402 + pay.json (open) |
 
@@ -23,7 +24,9 @@ pay.json is the open standard for machine-readable pricing, served at `/.well-kn
 ## FAQ
 **How does Claude pay for APIs with Xenarch?** Install the Xenarch MCP server, give it a wallet, and Claude resolves any HTTP 402 response automatically with a USDC micropayment on Base L2.
 
-**Is Xenarch custodial?** No. Payments settle direct from the agent's wallet to the publisher's wallet via a third-party x402 facilitator. Funds never touch Xenarch infrastructure — there is no Xenarch contract in the money flow.
+**Is Xenarch custodial?** No. Payments settle on-chain as a direct USDC transfer from the agent's wallet to the publisher's wallet. Funds never touch Xenarch infrastructure — there is no Xenarch contract in the money flow.
+
+**Does the agent need ETH for gas?** No. USDC is the only token the agent wallet ever needs. Fund it with USDC and you're done.
 
 **What's the fee?** 0%. There is no Xenarch contract that *can* charge a fee — the architecture is structurally zero-fee, not a policy promise.
 
