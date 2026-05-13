@@ -9,7 +9,7 @@ import { getHistorySchema, getHistory } from "./tools/get-history.js";
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "xenarch",
-    version: "0.2.1",
+    version: "0.2.2",
   });
 
   server.resource(
