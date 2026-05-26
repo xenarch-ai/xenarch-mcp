@@ -25,6 +25,9 @@ export interface ReceiptPayload {
   tx_hash?: string | null;
   facilitator?: string | null;
   wallet_address?: string | null;
+  // XEN-373: chain-of-custody token from POST /v1/agent/preflight,
+  // optional for Phase-2 backwards compat.
+  auth_token?: string | null;
 }
 
 const queue: ReceiptPayload[] = [];

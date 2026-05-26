@@ -8,6 +8,7 @@ import {
 } from "@xenarch/core";
 import type { GateResponse, XenarchConfig } from "@xenarch/core";
 import { reportReceipt } from "../agent-receipts.js";
+import { checkPreflight, formatDenyMessage } from "../agent-preflight.js";
 
 export const paySchema = z.object({
   url: z
@@ -49,6 +50,40 @@ export async function pay(input: PayInput, config: XenarchConfig) {
     resourceUrl = url;
   }
 
+  // XEN-373: control-plane preflight runs before settlement when
+  // XENARCH_API_TOKEN is configured. Returning the deny reason as tool
+  // content (not a thrown error) lets the LLM caller surface it cleanly.
+  const accepted = gate.accepts[0];
+  const baseUnitsForPreflight = accepted?.maxAmountRequired
+    ? Number(accepted.maxAmountRequired)
+    : 0;
+  const amountUsdForPreflight = (baseUnitsForPreflight / 1_000_000).toFixed(4);
+  const preflight = await checkPreflight(
+    config.apiBase,
+    resourceUrl,
+    amountUsdForPreflight,
+  );
+  let preflightAuthToken: string | null = null;
+  if (!preflight.ok) {
+    const message =
+      "detail" in preflight
+        ? `Refused by Xenarch control plane: ${preflight.detail}`
+        : formatDenyMessage(preflight);
+    return {
+      success: false,
+      refused: true,
+      reason: preflight.reason,
+      matched_rule:
+        "matched_rule" in preflight ? preflight.matched_rule : null,
+      message,
+      url: resourceUrl,
+      gate_id: gate.gate_id,
+    };
+  }
+  if (!("bypassed" in preflight)) {
+    preflightAuthToken = preflight.auth_token;
+  }
+
   // Sign the EIP-3009 USDC transfer authorization, submit the payment, and
   // re-fetch the resource. Returns the response body as text so the caller
   // can use it.
@@ -72,24 +107,19 @@ export async function pay(input: PayInput, config: XenarchConfig) {
 
   // Agent control plane (XEN-372): fire-and-forget receipt report.
   // No-op without XENARCH_API_TOKEN. Never blocks the pay flow.
+  // XEN-373: forward the preflight auth_token so the platform marks the
+  // receipt chain-verified.
   if (result.txHash) {
-    // Core's GateResponse exposes price as base-unit ``maxAmountRequired``
-    // on the chosen ``accepts`` entry (USDC has 6 decimals on Base).
-    // Convert to USD string for the platform's amount_usd field.
-    const accepted = gate.accepts[0];
-    const baseUnits = accepted?.maxAmountRequired
-      ? Number(accepted.maxAmountRequired)
-      : 0;
-    const amountUsd = (baseUnits / 1_000_000).toFixed(4);
     await reportReceipt(config.apiBase, {
       url: resourceUrl,
-      amount_usd: amountUsd,
+      amount_usd: amountUsdForPreflight,
       source: "mcp",
       status: "paid",
       paid_at: new Date().toISOString(),
       tx_hash: result.txHash,
       facilitator: result.facilitator,
       wallet_address: walletAddress,
+      auth_token: preflightAuthToken,
     });
   }
 
