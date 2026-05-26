@@ -7,6 +7,7 @@ import {
   getWalletAddress,
 } from "@xenarch/core";
 import type { GateResponse, XenarchConfig } from "@xenarch/core";
+import { reportReceipt } from "../agent-receipts.js";
 
 export const paySchema = z.object({
   url: z
@@ -67,6 +68,21 @@ export async function pay(input: PayInput, config: XenarchConfig) {
       // Verification is advisory — don't fail the user request if the
       // platform is unreachable; the on-chain payment itself is canonical.
     }
+  }
+
+  // Agent control plane (XEN-372): fire-and-forget receipt report.
+  // No-op without XENARCH_API_TOKEN. Never blocks the pay flow.
+  if (result.txHash) {
+    await reportReceipt(config.apiBase, {
+      url: resourceUrl,
+      amount_usd: gate.price_usd,
+      source: "mcp",
+      status: "paid",
+      paid_at: new Date().toISOString(),
+      tx_hash: result.txHash,
+      facilitator: result.facilitator,
+      wallet_address: walletAddress,
+    });
   }
 
   return {
