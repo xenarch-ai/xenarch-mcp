@@ -113,10 +113,11 @@ export async function checkPreflight(
     const body = (await res.json()) as PreflightResult;
     return body;
   } catch (err) {
+    const kind = (err as Error).name || "NetworkError";
     return {
       ok: false,
       reason: "control_plane_unreachable",
-      detail: (err as Error).message || "Network error reaching control plane",
+      detail: `${kind} reaching control plane`,
     };
   } finally {
     clearTimeout(timer);
