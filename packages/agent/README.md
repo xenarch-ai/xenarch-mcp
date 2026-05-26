@@ -55,6 +55,7 @@ claude mcp add xenarch -- npx -y @xenarch/agent-mcp
 | `XENARCH_API_BASE` | `https://xenarch.dev` | Xenarch platform API |
 | `XENARCH_NETWORK` | `base` | Network (`base` or `base-sepolia`) |
 | `XENARCH_MAX_PAYMENT_USD` | — | Max USD per call to auto-approve without prompting (defaults to 0.1 USDC inside x402-fetch) |
+| `XENARCH_API_TOKEN` | — | Optional `xa_live_*` token from https://dash.xenarch.dev/agent/settings. When set, the server reports every settled payment to the Xenarch agent control plane so all spend appears in the dashboard's `/agent/receipts` feed. Without it, the server works exactly as before — receipt reporting is opt-in and best-effort. |
 
 ## Links
 

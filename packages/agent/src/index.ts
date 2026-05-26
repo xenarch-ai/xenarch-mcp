@@ -4,6 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { createServer } from "./server.js";
+import { logControlPlaneStatus } from "./agent-receipts.js";
 import { randomUUID } from "node:crypto";
 import express from "express";
 
@@ -16,6 +17,7 @@ const isHttpMode =
   process.argv.includes("--http") || process.env.TRANSPORT === "http";
 
 async function main() {
+  logControlPlaneStatus();
   if (isHttpMode) {
     await startHttpServer();
   } else {
