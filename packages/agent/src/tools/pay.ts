@@ -73,9 +73,17 @@ export async function pay(input: PayInput, config: XenarchConfig) {
   // Agent control plane (XEN-372): fire-and-forget receipt report.
   // No-op without XENARCH_API_TOKEN. Never blocks the pay flow.
   if (result.txHash) {
+    // Core's GateResponse exposes price as base-unit ``maxAmountRequired``
+    // on the chosen ``accepts`` entry (USDC has 6 decimals on Base).
+    // Convert to USD string for the platform's amount_usd field.
+    const accepted = gate.accepts[0];
+    const baseUnits = accepted?.maxAmountRequired
+      ? Number(accepted.maxAmountRequired)
+      : 0;
+    const amountUsd = (baseUnits / 1_000_000).toFixed(4);
     await reportReceipt(config.apiBase, {
       url: resourceUrl,
-      amount_usd: gate.price_usd,
+      amount_usd: amountUsd,
       source: "mcp",
       status: "paid",
       paid_at: new Date().toISOString(),
