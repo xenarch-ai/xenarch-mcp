@@ -87,7 +87,37 @@ export async function pay(input: PayInput, config: XenarchConfig) {
   // Sign the EIP-3009 USDC transfer authorization, submit the payment, and
   // re-fetch the resource. Returns the response body as text so the caller
   // can use it.
-  const { response, result } = await payAndFetch(resourceUrl, config, gate);
+  //
+  // XEN-385: if settle/replay throws AFTER the platform's preflight already
+  // DECR'd the cap counter, POST a status='failed' receipt with the
+  // auth_token so the platform refunds the cap charge (JTI one-shot is
+  // enforced server-side). Without this, every MCP settle failure
+  // permanently consumes the operator's daily cap even though no payment
+  // landed on chain.
+  let response: Response;
+  let result: { txHash: string; facilitator: string };
+  try {
+    ({ response, result } = await payAndFetch(resourceUrl, config, gate));
+  } catch (err) {
+    if (preflightAuthToken) {
+      try {
+        await reportReceipt(config.apiBase, {
+          url: resourceUrl,
+          amount_usd: amountUsdForPreflight,
+          source: "mcp",
+          status: "failed",
+          paid_at: new Date().toISOString(),
+          tx_hash: null,
+          facilitator: null,
+          wallet_address: walletAddress,
+          auth_token: preflightAuthToken,
+        });
+      } catch {
+        // Best-effort. Don't mask the real settle error with a receipt-POST error.
+      }
+    }
+    throw err;
+  }
   const contentType = response.headers.get("content-type") ?? "";
   const body = contentType.includes("application/json")
     ? await response.json()
