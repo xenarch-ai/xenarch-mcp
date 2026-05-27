@@ -31,6 +31,14 @@ export interface PreflightDeny {
   ok: false;
   reason: string;
   matched_rule?: PreflightMatchedRule | null;
+  // XEN-374 cap context — present on cap denies.
+  remaining_today?: string | null;
+  remaining_month?: string | null;
+  resets_today_at?: string | null;
+  resets_month_at?: string | null;
+  cap_per_tx?: string | null;
+  cap_daily?: string | null;
+  cap_monthly?: string | null;
 }
 
 export interface PreflightUnreachable {
@@ -69,7 +77,68 @@ export function formatDenyMessage(result: PreflightDeny): string {
       "Edit rules at https://dash.xenarch.dev/agent/scope",
     ].join(" ");
   }
+  if (result.reason === "per_tx_cap") {
+    const cap = result.cap_per_tx ?? "?";
+    return [
+      `Refused by Xenarch control plane: per-transaction cap exceeded (max $${cap}).`,
+      "Raise the cap at https://dash.xenarch.dev/agent/caps",
+    ].join(" ");
+  }
+  if (result.reason === "daily_cap") {
+    const cap = result.cap_daily ?? "?";
+    const spent = result.cap_daily && result.remaining_today
+      ? subtractMoney(result.cap_daily, result.remaining_today)
+      : null;
+    const resetsIn = humanResetIn(result.resets_today_at);
+    const spentTxt = spent !== null ? `$${spent} spent of $${cap}` : `cap $${cap}`;
+    const resetTxt = resetsIn ? ` Resets in ${resetsIn}.` : "";
+    return [
+      `Refused by Xenarch control plane: daily cap exceeded (${spentTxt}).${resetTxt}`,
+      "Edit cap at https://dash.xenarch.dev/agent/caps",
+    ].join(" ");
+  }
+  if (result.reason === "monthly_cap") {
+    const cap = result.cap_monthly ?? "?";
+    const spent = result.cap_monthly && result.remaining_month
+      ? subtractMoney(result.cap_monthly, result.remaining_month)
+      : null;
+    const resetsIn = humanResetIn(result.resets_month_at);
+    const spentTxt = spent !== null ? `$${spent} spent of $${cap}` : `cap $${cap}`;
+    const resetTxt = resetsIn ? ` Resets in ${resetsIn}.` : "";
+    return [
+      `Refused by Xenarch control plane: monthly cap exceeded (${spentTxt}).${resetTxt}`,
+      "Edit cap at https://dash.xenarch.dev/agent/caps",
+    ].join(" ");
+  }
   return `Refused by Xenarch control plane: ${result.reason}`;
+}
+
+function humanResetIn(isoTimestamp: string | null | undefined): string | null {
+  if (!isoTimestamp) return null;
+  // Defensive: ECMAScript Date.parse on a tz-naive ISO string is
+  // implementation-defined. Force UTC if the platform ever drops the
+  // tz suffix.
+  const stamp = /[Zz]|[+\-]\d{2}:?\d{2}$/.test(isoTimestamp)
+    ? isoTimestamp
+    : isoTimestamp + "Z";
+  const target = Date.parse(stamp);
+  if (!Number.isFinite(target)) return null;
+  const ms = target - Date.now();
+  if (ms <= 0) return null;
+  const totalMinutes = Math.floor(ms / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m`;
+  return `${hours}h ${minutes}m`;
+}
+
+function subtractMoney(a: string, b: string): string | null {
+  const an = Number.parseFloat(a);
+  const bn = Number.parseFloat(b);
+  if (!Number.isFinite(an) || !Number.isFinite(bn)) return null;
+  const diff = an - bn;
+  if (diff < 0) return "0.00";
+  return diff.toFixed(2);
 }
 
 export async function checkPreflight(
