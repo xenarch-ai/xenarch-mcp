@@ -214,18 +214,20 @@ export function createServer(): McpServer {
     },
     handler: (input: any, config: XenarchConfig) => Promise<unknown>,
   ): void {
-    server.tool(name, description, schema.shape, hints, async (input) => {
+    server.tool(name, description, schema.shape, hints, async (input: any) => {
       try {
         const config = await getConfig();
         const result = await handler(input, config);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [
+            { type: "text" as const, text: JSON.stringify(result, null, 2) },
+          ],
         };
       } catch (error) {
         return {
           content: [
             {
-              type: "text",
+              type: "text" as const,
               text: `Error: ${error instanceof Error ? error.message : String(error)}`,
             },
           ],
