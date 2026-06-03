@@ -18,12 +18,15 @@ export {
   rotateAgentKey,
   revokeAgentKey,
   listAgentReceipts,
+  deviceStart,
+  devicePoll,
 } from "./api.js";
 export {
   loadConfig,
   generateWallet,
   getWalletAddress,
   ensureConfigDir,
+  saveSession,
 } from "./config.js";
 export type { LoadConfigResult } from "./config.js";
 export {
@@ -53,5 +56,7 @@ export type {
   AgentApiKeyIssued,
   AgentReceiptItem,
   AgentReceiptList,
+  DeviceStartResponse,
+  DevicePollResponse,
 } from "./types.js";
 export type { PaymentHistoryItem, FetchGateResult } from "./api.js";
