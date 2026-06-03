@@ -5,11 +5,12 @@ import type { XenarchConfig, LoadConfigResult } from "@xenarch/core";
 import { checkGateSchema, checkGate } from "./tools/check-gate.js";
 import { paySchema, pay } from "./tools/pay.js";
 import { getHistorySchema, getHistory } from "./tools/get-history.js";
+import * as cp from "./tools/control-plane.js";
 
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "xenarch",
-    version: "0.2.3",
+    version: "0.3.0",
   });
 
   server.resource(
@@ -193,6 +194,151 @@ export function createServer(): McpServer {
         };
       }
     },
+  );
+
+  // --- Agent control plane (XEN-409) ---------------------------------------
+  // Manage the operator's agent: caps, scope, pause, API keys, receipts.
+  // SIWE-owner-authed via the session the CLI's `xenarch agent login` wrote
+  // to ~/.xenarch/config.json. Privileged ops require `confirm: true`; without
+  // it the tool returns a `needs_confirmation` payload (the Tier-2 gate).
+  function registerAgentTool(
+    name: string,
+    description: string,
+    schema: z.AnyZodObject,
+    hints: {
+      title: string;
+      readOnlyHint: boolean;
+      destructiveHint: boolean;
+      idempotentHint: boolean;
+      openWorldHint: boolean;
+    },
+    handler: (input: any, config: XenarchConfig) => Promise<unknown>,
+  ): void {
+    server.tool(name, description, schema.shape, hints, async (input) => {
+      try {
+        const config = await getConfig();
+        const result = await handler(input, config);
+        return {
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    });
+  }
+
+  registerAgentTool(
+    "xenarch_agent_status",
+    "Show the operator's agent profile (name, paused state) and spend summary for a period. Read-only. Needs a SIWE session from `xenarch agent login`.",
+    cp.agentStatusSchema,
+    { title: "Agent Status", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    cp.agentStatus,
+  );
+  registerAgentTool(
+    "xenarch_agent_get_caps",
+    "Read the agent's spending caps (per-transaction, daily, monthly) and remaining headroom. Read-only.",
+    cp.agentGetCapsSchema,
+    { title: "Get Spend Caps", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    cp.agentGetCaps,
+  );
+  registerAgentTool(
+    "xenarch_agent_set_caps",
+    "Set spending caps. Pass per_tx/daily/monthly in USD ('none' disables an axis); omit an axis to leave it unchanged. RAISING or REMOVING a cap requires confirm: true (returns needs_confirmation otherwise). Tightening is free.",
+    cp.agentSetCapsSchema,
+    { title: "Set Spend Caps", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    cp.agentSetCaps,
+  );
+  registerAgentTool(
+    "xenarch_agent_reset_day_cap",
+    "Reset today's daily-spend counter back to the full daily cap (recovery from accidental mid-day exhaustion).",
+    cp.agentResetDayCapSchema,
+    { title: "Reset Daily Counter", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    cp.agentResetDayCap,
+  );
+  registerAgentTool(
+    "xenarch_agent_get_scope",
+    "Read the agent's scope: default posture (allow/deny) and the allow/deny rule list. Read-only.",
+    cp.agentGetScopeSchema,
+    { title: "Get Scope Rules", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    cp.agentGetScope,
+  );
+  registerAgentTool(
+    "xenarch_agent_add_scope_rule",
+    "Add an allow/deny scope rule. A 'deny' rule tightens (free); an 'allow' rule loosens and requires confirm: true.",
+    cp.agentAddScopeRuleSchema,
+    { title: "Add Scope Rule", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    cp.agentAddScopeRule,
+  );
+  registerAgentTool(
+    "xenarch_agent_remove_scope_rule",
+    "Remove a scope rule by id (full UUID or unambiguous prefix). Removing a DENY rule loosens scope and requires confirm: true.",
+    cp.agentRemoveScopeRuleSchema,
+    { title: "Remove Scope Rule", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    cp.agentRemoveScopeRule,
+  );
+  registerAgentTool(
+    "xenarch_agent_set_default_scope",
+    "Set the default scope posture for unmatched URLs. 'deny' tightens (free); 'allow' loosens and requires confirm: true.",
+    cp.agentSetDefaultScopeSchema,
+    { title: "Set Default Scope", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    cp.agentSetDefaultScope,
+  );
+  registerAgentTool(
+    "xenarch_agent_pause",
+    "Kill switch: pause the agent so all of its payments are blocked immediately. Tightening, so no confirm needed.",
+    cp.agentPauseSchema,
+    { title: "Pause Agent", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    cp.agentPause,
+  );
+  registerAgentTool(
+    "xenarch_agent_resume",
+    "Lift the pause so the agent can spend again (subject to caps + scope). Requires confirm: true.",
+    cp.agentResumeSchema,
+    { title: "Resume Agent", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    cp.agentResume,
+  );
+  registerAgentTool(
+    "xenarch_agent_list_keys",
+    "List the agent's xa_live_ API keys (id, label, last-used, revoked state). Never returns plaintext. Read-only.",
+    cp.agentListKeysSchema,
+    { title: "List API Keys", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    cp.agentListKeys,
+  );
+  registerAgentTool(
+    "xenarch_agent_create_key",
+    "Issue a new xa_live_ API key (plaintext returned once). Issues a live spending credential — requires confirm: true.",
+    cp.agentCreateKeySchema,
+    { title: "Create API Key", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    cp.agentCreateKey,
+  );
+  registerAgentTool(
+    "xenarch_agent_rotate_key",
+    "Rotate an API key by id (full UUID or prefix) — invalidates the old secret, returns a new one once. Requires confirm: true.",
+    cp.agentRotateKeySchema,
+    { title: "Rotate API Key", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    cp.agentRotateKey,
+  );
+  registerAgentTool(
+    "xenarch_agent_revoke_key",
+    "Permanently revoke an API key by id (full UUID or prefix). Requires confirm: true.",
+    cp.agentRevokeKeySchema,
+    { title: "Revoke API Key", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    cp.agentRevokeKey,
+  );
+  registerAgentTool(
+    "xenarch_agent_get_receipts",
+    "List the agent's payment receipts with filters (period, status, source, domain) and pagination. Read-only.",
+    cp.agentGetReceiptsSchema,
+    { title: "Get Receipts", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    cp.agentGetReceipts,
   );
 
   return server;

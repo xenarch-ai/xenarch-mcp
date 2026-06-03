@@ -28,6 +28,23 @@ export async function loadConfig(): Promise<LoadConfigResult> {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
 
+  // The CLI (`xenarch agent ...`) writes snake_case keys to the same
+  // ~/.xenarch/config.json. Adopt its SIWE session + API base so the MCP
+  // control-plane tools ride the CLI's owner session against the same host.
+  const rawCfg = config as Record<string, unknown>;
+  if (!config.sessionToken && typeof rawCfg.session_token === "string") {
+    config.sessionToken = rawCfg.session_token;
+  }
+  if (
+    !config.sessionExpiresAt &&
+    typeof rawCfg.session_expires_at === "string"
+  ) {
+    config.sessionExpiresAt = rawCfg.session_expires_at;
+  }
+  if (!config.apiBase && typeof rawCfg.api_base === "string") {
+    config.apiBase = rawCfg.api_base;
+  }
+
   if (!config.privateKey) {
     try {
       const raw = await readFile(WALLET_FILE, "utf-8");
@@ -52,6 +69,9 @@ export async function loadConfig(): Promise<LoadConfigResult> {
   }
   if (process.env.XENARCH_MAX_PAYMENT_USD) {
     config.maxPaymentUsd = parseFloat(process.env.XENARCH_MAX_PAYMENT_USD);
+  }
+  if (process.env.XENARCH_SESSION_TOKEN) {
+    config.sessionToken = process.env.XENARCH_SESSION_TOKEN;
   }
 
   let walletCreated: { address: string } | undefined;
