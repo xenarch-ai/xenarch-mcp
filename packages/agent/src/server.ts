@@ -6,11 +6,12 @@ import { checkGateSchema, checkGate } from "./tools/check-gate.js";
 import { paySchema, pay } from "./tools/pay.js";
 import { getHistorySchema, getHistory } from "./tools/get-history.js";
 import * as cp from "./tools/control-plane.js";
+import * as login from "./tools/login.js";
 
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "xenarch",
-    version: "0.3.0",
+    version: "0.4.0",
   });
 
   server.resource(
@@ -237,6 +238,13 @@ export function createServer(): McpServer {
     });
   }
 
+  registerAgentTool(
+    "xenarch_agent_login",
+    "Sign in to the agent control plane using your browser wallet — no CLI needed. First call returns a link; open it, sign in with your wallet on the dashboard, and approve. Call this tool again to finish — the 7-day session is then used by every other xenarch_agent_* tool. Use this when a control-plane tool reports you're not signed in.",
+    login.agentLoginSchema,
+    { title: "Agent Login", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    login.agentLogin,
+  );
   registerAgentTool(
     "xenarch_agent_status",
     "Show the operator's agent profile (name, paused state) and spend summary for a period. Read-only. Needs a SIWE session from `xenarch agent login`.",

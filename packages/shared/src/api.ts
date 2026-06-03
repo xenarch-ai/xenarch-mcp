@@ -13,6 +13,8 @@ import type {
   AgentApiKeySummary,
   AgentApiKeyIssued,
   AgentReceiptList,
+  DeviceStartResponse,
+  DevicePollResponse,
 } from "./types.js";
 import { SESSION_COOKIE_NAME } from "./types.js";
 
@@ -300,4 +302,36 @@ export function listAgentReceipts(
     "GET",
     `/receipts${qs}`,
   );
+}
+
+// --- Device-authorization flow (XEN-411) ---
+
+/** Begin a browser device-login. No auth — useless until a human approves. */
+export async function deviceStart(
+  apiBase: string,
+): Promise<DeviceStartResponse> {
+  const res = await fetch(`${apiBase}/v1/auth/device/start`, {
+    method: "POST",
+    headers: { "User-Agent": USER_AGENT, "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to start device login: ${await errorMessage(res)}`);
+  }
+  return (await res.json()) as DeviceStartResponse;
+}
+
+/** Poll for approval; returns the session token once a human approves. */
+export async function devicePoll(
+  apiBase: string,
+  deviceCode: string,
+): Promise<DevicePollResponse> {
+  const res = await fetch(`${apiBase}/v1/auth/device/poll`, {
+    method: "POST",
+    headers: { "User-Agent": USER_AGENT, "Content-Type": "application/json" },
+    body: JSON.stringify({ device_code: deviceCode }),
+  });
+  if (!res.ok) {
+    throw new Error(`Device poll failed: ${await errorMessage(res)}`);
+  }
+  return (await res.json()) as DevicePollResponse;
 }

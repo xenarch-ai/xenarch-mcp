@@ -1,3 +1,6 @@
+import { writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
+import { homedir } from "node:os";
 import { z } from "zod";
 import {
   fetchGate,
@@ -119,9 +122,49 @@ export async function pay(input: PayInput, config: XenarchConfig) {
     throw err;
   }
   const contentType = response.headers.get("content-type") ?? "";
-  const body = contentType.includes("application/json")
-    ? await response.json()
+  const rawBody = contentType.includes("application/json")
+    ? JSON.stringify(await response.json())
     : await response.text();
+
+  // Token-safe content (XEN-412): a paid resource is often a full webpage or
+  // dataset (tens of KB). Returning it whole as the tool result blows the MCP
+  // token limit and floods the caller's context. Persist the full body to a
+  // file and return only bounded metadata + a readable preview — the agent
+  // gets the content (read the file for the rest) without detonating context.
+  const contentLength = rawBody.length;
+  const PREVIEW_CHARS = 2000;
+  let contentFile: string | null = null;
+  try {
+    const dir = join(homedir(), ".xenarch", "paid");
+    await mkdir(dir, { recursive: true, mode: 0o700 });
+    const ext = contentType.includes("json")
+      ? "json"
+      : contentType.includes("html")
+        ? "html"
+        : "txt";
+    // gate_id is a platform-issued UUID, but it lands in a filesystem path —
+    // strip anything but [A-Za-z0-9_-] so a malformed id can't traverse out.
+    const safeId = gate.gate_id.replace(/[^a-zA-Z0-9_-]/g, "_");
+    contentFile = join(dir, `${safeId}.${ext}`);
+    await writeFile(contentFile, rawBody, { mode: 0o600 });
+  } catch {
+    // Best-effort. If we can't persist it, the preview still carries content.
+    contentFile = null;
+  }
+  // For HTML, strip tags so the preview is readable text, not <head> boilerplate.
+  let previewSource = rawBody;
+  if (contentType.includes("html")) {
+    previewSource = rawBody
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  const contentTruncated = previewSource.length > PREVIEW_CHARS;
+  const contentPreview = contentTruncated
+    ? previewSource.slice(0, PREVIEW_CHARS) + "…"
+    : previewSource;
 
   // Best-effort platform-side verification using the on-chain tx_hash.
   // Platform looks up the USDC Transfer event each call (stateless).
@@ -161,7 +204,11 @@ export async function pay(input: PayInput, config: XenarchConfig) {
     seller_wallet: gate.seller_wallet,
     url: resourceUrl,
     wallet: walletAddress,
-    content: body,
+    content_type: contentType || null,
+    content_length: contentLength,
+    content_truncated: contentTruncated,
+    content_preview: contentPreview,
+    content_file: contentFile,
     verified,
   };
 }

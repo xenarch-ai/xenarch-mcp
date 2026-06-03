@@ -120,3 +120,25 @@ export async function generateWallet(): Promise<{
 export function getWalletAddress(config: XenarchConfig): string {
   return privateKeyToAccount(config.privateKey as `0x${string}`).address;
 }
+
+/**
+ * Persist a SIWE session to ~/.xenarch/config.json (snake_case, so the
+ * Xenarch CLI reads the same session). Merges into the existing config —
+ * preserves the wallet/privateKey and every other key. XEN-411.
+ */
+export async function saveSession(
+  sessionToken: string,
+  sessionExpiresAt: string,
+): Promise<void> {
+  await ensureConfigDir();
+  let raw: Record<string, unknown> = {};
+  try {
+    raw = JSON.parse(await readFile(CONFIG_FILE, "utf-8"));
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
+  raw.session_token = sessionToken;
+  raw.session_expires_at = sessionExpiresAt;
+  await writeFile(CONFIG_FILE, JSON.stringify(raw, null, 2), { mode: 0o600 });
+  await chmod(CONFIG_FILE, 0o600);
+}

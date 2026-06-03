@@ -193,3 +193,21 @@ export interface AgentReceiptList {
   page: number;
   per_page: number;
 }
+
+// --- Device-authorization flow (XEN-411): browser login without the CLI ---
+
+export interface DeviceStartResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  verification_uri_complete: string;
+  expires_in: number;
+  interval: number;
+}
+
+export interface DevicePollResponse {
+  status: "pending" | "approved" | "expired";
+  interval?: number;
+  session_token?: string;
+  expires_at?: string;
+}
