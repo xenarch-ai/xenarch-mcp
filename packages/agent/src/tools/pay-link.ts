@@ -1,6 +1,6 @@
 // Wrapped pay-link payment tool (XEN-415) — the Xenarch-rails counterpart to
 // xenarch_pay (pure x402 gate). Sources the x402 envelope from
-// POST /v1/links/{id}/initiate, settles EIP-3009 via a facilitator (settleX402,
+// POST /v1/links/{id}/initiate, settles EIP-3009 on Base (settleX402,
 // shared with the gate path), and finalizes with POST /v1/links/{id}/claim.
 
 import { z } from "zod";
