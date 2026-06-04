@@ -421,7 +421,7 @@ export function createServer(): McpServer {
   );
   registerAgentTool(
     "xenarch_pay_link",
-    "Pay a Xenarch pay-link by id (wrapped x402): fetches the link's payment envelope, settles EIP-3009 USDC on Base via a facilitator, and confirms the payment with the link. Use this for pay.xenarch.com/l/<id> links; use xenarch_pay for arbitrary x402-gated URLs. Pays from the agent wallet (USDC only, no gas needed).",
+    "Pay a Xenarch pay-link by id (wrapped x402): fetches the link's payment envelope, settles EIP-3009 USDC on Base, and confirms the payment with the link. Use this for pay.xenarch.com/l/<id> links; use xenarch_pay for arbitrary x402-gated URLs. Pays from the agent wallet (USDC only, no gas needed).",
     payLink.xenarchPayLinkSchema,
     { title: "Pay a Pay-Link", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     payLink.xenarchPayLink,
