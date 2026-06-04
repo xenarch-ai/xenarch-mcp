@@ -13,6 +13,7 @@ import {
   type GateResponse,
   type PayLinkClaimResponse,
 } from "@xenarch/core";
+import { checkPreflight, formatDenyMessage } from "../agent-preflight.js";
 
 const CLAIM_RETRIES = 6;
 const CLAIM_RETRY_DELAY_MS = 3000;
@@ -45,6 +46,7 @@ export interface PayLinkFlowResult {
   link_id: string;
   amount_usd: string;
   claim: PayLinkClaimResponse;
+  auth_token: string | null;
 }
 
 export async function payLinkWrapped(
@@ -62,6 +64,25 @@ export async function payLinkWrapped(
   if (parseFloat(priceUsd) > maxPriceUsd) {
     throw new Error(`Pay-link price $${priceUsd} exceeds max_price_usd $${maxPriceUsd}.`);
   }
+
+  // Agent control-plane preflight (XEN-373): gate the pay-link by the agent's
+  // caps / scope / pause before settling — same enforcement xenarch_pay uses.
+  // No-op unless XENARCH_API_TOKEN is configured (fail-closed if it is).
+  const preflight = await checkPreflight(
+    config.apiBase,
+    `https://pay.xenarch.com/l/${linkId}`,
+    priceUsd,
+  );
+  if (!preflight.ok) {
+    // formatDenyMessage already prefixes "Refused by Xenarch control plane:";
+    // only the unreachable (detail) case needs the prefix added.
+    const reason =
+      "detail" in preflight
+        ? `Refused by Xenarch control plane: ${preflight.detail}`
+        : formatDenyMessage(preflight);
+    throw new Error(reason);
+  }
+  const authToken = "bypassed" in preflight ? null : preflight.auth_token;
 
   const gate: GateResponse = {
     gate_id: env.link_id,
@@ -86,6 +107,7 @@ export async function payLinkWrapped(
         link_id: linkId,
         amount_usd: priceUsd,
         claim,
+        auth_token: authToken,
       };
     } catch (err) {
       lastErr = err;
