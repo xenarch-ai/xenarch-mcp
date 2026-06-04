@@ -7,11 +7,13 @@ import { paySchema, pay } from "./tools/pay.js";
 import { getHistorySchema, getHistory } from "./tools/get-history.js";
 import * as cp from "./tools/control-plane.js";
 import * as login from "./tools/login.js";
+import * as merchant from "./tools/merchant.js";
+import * as payLink from "./tools/pay-link.js";
 
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "xenarch",
-    version: "0.4.0",
+    version: "1.0.0",
   });
 
   server.resource(
@@ -349,6 +351,80 @@ export function createServer(): McpServer {
     cp.agentGetReceiptsSchema,
     { title: "Get Receipts", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     cp.agentGetReceipts,
+  );
+
+  // --- Merchant ops (XEN-414/415) — the "get paid" side. SIWE-authed via the
+  // same session as the control plane. create_link is validate-first; signing
+  // and revoke are gated by confirm: true.
+  registerAgentTool(
+    "xenarch_list_links",
+    "List the merchant's pay-links (newest first), with cursor pagination. Read-only. Needs a SIWE session from `xenarch agent login`.",
+    merchant.xenarchListLinksSchema,
+    { title: "List Pay-Links", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    merchant.xenarchListLinks,
+  );
+  registerAgentTool(
+    "xenarch_get_link",
+    "Get one pay-link's detail (status, params, stats) by id. Read-only.",
+    merchant.xenarchGetLinkSchema,
+    { title: "Get Pay-Link", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    merchant.xenarchGetLink,
+  );
+  registerAgentTool(
+    "xenarch_create_link",
+    "Create a pay-link. VALIDATE-FIRST: call with mode:'validate' (default) to learn which fields are missing (each missing field includes a prompt to ask the user); once valid, call again with mode:'create' and confirm:true to sign + create. Signs with the agent's local key — the signer must equal the SIWE session wallet. Amount is USDC (max 1.00).",
+    merchant.xenarchCreateLinkSchema,
+    { title: "Create Pay-Link", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    merchant.xenarchCreateLink,
+  );
+  registerAgentTool(
+    "xenarch_revoke_link",
+    "Revoke a pay-link by id so it can no longer be paid. Requires confirm: true (returns needs_confirmation otherwise).",
+    merchant.xenarchRevokeLinkSchema,
+    { title: "Revoke Pay-Link", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    merchant.xenarchRevokeLink,
+  );
+  registerAgentTool(
+    "xenarch_list_payments",
+    "List payments RECEIVED across the merchant's pay-links (newest first), with cursor pagination. Read-only.",
+    merchant.xenarchListPaymentsSchema,
+    { title: "List Received Payments", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    merchant.xenarchListPayments,
+  );
+  registerAgentTool(
+    "xenarch_list_subscribers",
+    "List subscribers across the merchant's subscription pay-links, with optional filters (link_id, status, mode). Read-only.",
+    merchant.xenarchListSubscribersSchema,
+    { title: "List Subscribers", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    merchant.xenarchListSubscribers,
+  );
+  registerAgentTool(
+    "xenarch_get_merchant_profile",
+    "Get the merchant profile (issuer identity, domain verification status). Read-only. Returns null if none is set yet.",
+    merchant.xenarchGetMerchantProfileSchema,
+    { title: "Get Merchant Profile", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    merchant.xenarchGetMerchantProfile,
+  );
+  registerAgentTool(
+    "xenarch_update_merchant_profile",
+    "Update the merchant profile (issuer name, site, email, address, tax id, brand color, logo, payout rhythm). Only the fields you pass change; the rest are preserved (whole-state upsert).",
+    merchant.xenarchUpdateMerchantProfileSchema,
+    { title: "Update Merchant Profile", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    merchant.xenarchUpdateMerchantProfile,
+  );
+  registerAgentTool(
+    "xenarch_verify_domain",
+    "Verify the merchant's domain via its DNS TXT record at _xenarch.<merchant_site> (XEN-394). Set merchant_site first via xenarch_update_merchant_profile.",
+    merchant.xenarchVerifyDomainSchema,
+    { title: "Verify Domain", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    merchant.xenarchVerifyDomain,
+  );
+  registerAgentTool(
+    "xenarch_pay_link",
+    "Pay a Xenarch pay-link by id (wrapped x402): fetches the link's payment envelope, settles EIP-3009 USDC on Base via a facilitator, and confirms the payment with the link. Use this for pay.xenarch.com/l/<id> links; use xenarch_pay for arbitrary x402-gated URLs. Pays from the agent wallet (USDC only, no gas needed).",
+    payLink.xenarchPayLinkSchema,
+    { title: "Pay a Pay-Link", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    payLink.xenarchPayLink,
   );
 
   return server;

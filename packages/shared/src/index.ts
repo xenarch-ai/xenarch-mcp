@@ -1,4 +1,4 @@
-export { payAndFetch } from "./payment.js";
+export { payAndFetch, settleX402 } from "./payment.js";
 export {
   fetchGate,
   fetchGateByDomain,
@@ -20,7 +20,28 @@ export {
   listAgentReceipts,
   deviceStart,
   devicePoll,
+  meSessionRequest,
+  getLinkSchema,
+  validateLink,
+  createLink,
+  listLinks,
+  getLinkDetail,
+  revokeLink,
+  listMerchantPayments,
+  listSubscribers,
+  getMerchantProfile,
+  putMerchantProfile,
+  verifyMerchantDomain,
+  initiateLinkPayment,
+  claimLinkPayment,
 } from "./api.js";
+export {
+  signPayLink,
+  computeTemplateHash,
+  canonicalJson,
+  stringifyNumbers,
+} from "./pay-link-signer.js";
+export type { PayLinkLit, SignedPayLink } from "./pay-link-signer.js";
 export {
   loadConfig,
   generateWallet,
@@ -58,5 +79,24 @@ export type {
   AgentReceiptList,
   DeviceStartResponse,
   DevicePollResponse,
+  PayLinkSchemaResponse,
+  PayLinkSchemaField,
+  PayLinkFieldIssue,
+  PayLinkValidateResponse,
+  LitValue,
+  PayLinkCreateBody,
+  PayLinkCreateResponse,
+  PayLinkListItem,
+  PayLinkListResponse,
+  PayLinkDetail,
+  PayLinkRevokeResponse,
+  MerchantPaymentItem,
+  MerchantPaymentListResponse,
+  SubscriberListItem,
+  SubscriberListResponse,
+  MerchantProfileBody,
+  MerchantProfileResponse,
+  PayLinkInitiateResponse,
+  PayLinkClaimResponse,
 } from "./types.js";
 export type { PaymentHistoryItem, FetchGateResult } from "./api.js";

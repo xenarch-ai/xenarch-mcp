@@ -162,6 +162,107 @@ async function postSettle(
  * `Error("Paid fetch failed: ...")` if every facilitator settled but
  * the publisher's replay returns non-200.
  */
+/**
+ * Settle an x402 envelope and return the on-chain tx — WITHOUT the gate URL
+ * re-fetch. This is the wrapped-pay-link counterpart to payAndFetch: a pay-link
+ * finalizes via POST /v1/links/{id}/claim, not a publisher replay. Kept here so
+ * it reuses the module-private EIP-3009 signing constants; the signing body
+ * mirrors payAndFetch (XEN-414).
+ */
+export async function settleX402(
+  config: XenarchConfig,
+  gate: GateResponse,
+): Promise<{ txHash: string; facilitator: string }> {
+  const account = privateKeyToAccount(config.privateKey as Hex);
+
+  const accept = selectAccept(
+    (gate.accepts as AcceptEntry[]) ?? [],
+    gate.network,
+  );
+  if (accept === null || !accept.payTo || !accept.maxAmountRequired) {
+    throw new Error(
+      "Pay-link has no compatible payment scheme in `accepts` (need scheme=exact + payTo + maxAmountRequired).",
+    );
+  }
+
+  const amount = BigInt(accept.maxAmountRequired);
+  if (config.maxPaymentUsd) {
+    const cap = parseUnits(config.maxPaymentUsd.toString(), USDC_DECIMALS);
+    if (amount > cap) {
+      throw new Error(
+        `Payment ${amount} exceeds maxPaymentUsd cap ${cap} (USDC base units).`,
+      );
+    }
+  }
+
+  const from = account.address;
+  const validAfter = 0n;
+  const validBefore = BigInt(
+    Math.floor(Date.now() / 1000) + AUTH_VALIDITY_SECONDS,
+  );
+  const nonce = randomHex32() as Hex;
+
+  const signature = await account.signTypedData({
+    domain: USDC_DOMAIN,
+    types: TRANSFER_WITH_AUTHORIZATION_TYPES,
+    primaryType: "TransferWithAuthorization",
+    message: {
+      from,
+      to: accept.payTo as Hex,
+      value: amount,
+      validAfter,
+      validBefore,
+      nonce,
+    },
+  });
+
+  const signed: SignedX402Payload = {
+    x402Version: 1,
+    scheme: "exact",
+    network: accept.network ?? gate.network,
+    payload: {
+      signature,
+      authorization: {
+        from,
+        to: accept.payTo,
+        value: amount.toString(),
+        validAfter: validAfter.toString(),
+        validBefore: validBefore.toString(),
+        nonce,
+      },
+    },
+  };
+
+  const settleBody = {
+    x402Version: 1,
+    paymentPayload: signed,
+    paymentRequirements: accept,
+  };
+
+  const tried: string[] = [];
+  for (const facilitator of gate.facilitators ?? []) {
+    tried.push(facilitator.url);
+    let result;
+    try {
+      result = await postSettle(facilitator.url, settleBody, SETTLE_TIMEOUT_MS);
+    } catch {
+      continue;
+    }
+    if (
+      !result.ok ||
+      result.body === null ||
+      result.body.success !== true ||
+      typeof result.body.transaction !== "string" ||
+      result.body.transaction.length === 0
+    ) {
+      continue;
+    }
+    return { txHash: result.body.transaction, facilitator: facilitator.url };
+  }
+
+  throw new NoFacilitatorSettledError(tried);
+}
+
 export async function payAndFetch(
   url: string,
   config: XenarchConfig,

@@ -15,6 +15,19 @@ import type {
   AgentReceiptList,
   DeviceStartResponse,
   DevicePollResponse,
+  PayLinkSchemaResponse,
+  PayLinkValidateResponse,
+  PayLinkCreateBody,
+  PayLinkCreateResponse,
+  PayLinkListResponse,
+  PayLinkDetail,
+  PayLinkRevokeResponse,
+  MerchantPaymentListResponse,
+  SubscriberListResponse,
+  MerchantProfileResponse,
+  MerchantProfileBody,
+  PayLinkInitiateResponse,
+  PayLinkClaimResponse,
 } from "./types.js";
 import { SESSION_COOKIE_NAME } from "./types.js";
 
@@ -334,4 +347,213 @@ export async function devicePoll(
     throw new Error(`Device poll failed: ${await errorMessage(res)}`);
   }
   return (await res.json()) as DevicePollResponse;
+}
+
+// --- Merchant ops (SIWE session on bare /v1/* paths, XEN-414) -------------
+//
+// The agent control plane lives under /v1/me/agent (meAgentRequest). Merchant
+// routes (/v1/links, /v1/payments, /v1/subscribers, /v1/merchant-profile)
+// share the same xen_session cookie but sit at bare /v1/* paths.
+
+export async function meSessionRequest<T>(
+  apiBase: string,
+  sessionToken: string,
+  method: string,
+  path: string,
+  body?: unknown,
+  extraHeaders?: Record<string, string>,
+): Promise<T> {
+  const res = await fetch(`${apiBase}${path}`, {
+    method,
+    headers: {
+      "User-Agent": USER_AGENT,
+      Cookie: `${SESSION_COOKIE_NAME}=${sessionToken}`,
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(extraHeaders ?? {}),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (res.status === 401) {
+    throw new SessionExpiredError(await errorMessage(res));
+  }
+  if (!res.ok) {
+    throw new Error(await errorMessage(res));
+  }
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+/** GET /v1/links/schema — public, no auth. The create-body descriptor. */
+export async function getLinkSchema(
+  apiBase: string,
+): Promise<PayLinkSchemaResponse> {
+  const res = await fetch(`${apiBase}/v1/links/schema`, {
+    headers: { "User-Agent": USER_AGENT },
+  });
+  if (!res.ok) throw new Error(await errorMessage(res));
+  return (await res.json()) as PayLinkSchemaResponse;
+}
+
+export function validateLink(
+  apiBase: string,
+  token: string,
+  params: Record<string, unknown>,
+): Promise<PayLinkValidateResponse> {
+  return meSessionRequest<PayLinkValidateResponse>(
+    apiBase,
+    token,
+    "POST",
+    "/v1/links/validate",
+    { params },
+  );
+}
+
+export function createLink(
+  apiBase: string,
+  token: string,
+  body: PayLinkCreateBody,
+  idempotencyKey: string,
+): Promise<PayLinkCreateResponse> {
+  return meSessionRequest<PayLinkCreateResponse>(
+    apiBase,
+    token,
+    "POST",
+    "/v1/links",
+    body,
+    { "Idempotency-Key": idempotencyKey },
+  );
+}
+
+export function listLinks(
+  apiBase: string,
+  token: string,
+  query = "",
+): Promise<PayLinkListResponse> {
+  const qs = query ? `?${query}` : "";
+  return meSessionRequest<PayLinkListResponse>(apiBase, token, "GET", `/v1/links${qs}`);
+}
+
+export function getLinkDetail(
+  apiBase: string,
+  token: string,
+  linkId: string,
+): Promise<PayLinkDetail> {
+  return meSessionRequest<PayLinkDetail>(
+    apiBase,
+    token,
+    "GET",
+    `/v1/links/${encodeURIComponent(linkId)}`,
+  );
+}
+
+export function revokeLink(
+  apiBase: string,
+  token: string,
+  linkId: string,
+): Promise<PayLinkRevokeResponse> {
+  return meSessionRequest<PayLinkRevokeResponse>(
+    apiBase,
+    token,
+    "DELETE",
+    `/v1/links/${encodeURIComponent(linkId)}`,
+  );
+}
+
+export function listMerchantPayments(
+  apiBase: string,
+  token: string,
+  query = "",
+): Promise<MerchantPaymentListResponse> {
+  const qs = query ? `?${query}` : "";
+  return meSessionRequest<MerchantPaymentListResponse>(
+    apiBase,
+    token,
+    "GET",
+    `/v1/payments/received${qs}`,
+  );
+}
+
+export function listSubscribers(
+  apiBase: string,
+  token: string,
+  query = "",
+): Promise<SubscriberListResponse> {
+  const qs = query ? `?${query}` : "";
+  return meSessionRequest<SubscriberListResponse>(
+    apiBase,
+    token,
+    "GET",
+    `/v1/subscribers${qs}`,
+  );
+}
+
+export function getMerchantProfile(
+  apiBase: string,
+  token: string,
+): Promise<MerchantProfileResponse | null> {
+  return meSessionRequest<MerchantProfileResponse | null>(
+    apiBase,
+    token,
+    "GET",
+    "/v1/merchant-profile",
+  );
+}
+
+export function putMerchantProfile(
+  apiBase: string,
+  token: string,
+  body: MerchantProfileBody,
+): Promise<MerchantProfileResponse> {
+  return meSessionRequest<MerchantProfileResponse>(
+    apiBase,
+    token,
+    "PUT",
+    "/v1/merchant-profile",
+    body,
+  );
+}
+
+export function verifyMerchantDomain(
+  apiBase: string,
+  token: string,
+): Promise<MerchantProfileResponse> {
+  return meSessionRequest<MerchantProfileResponse>(
+    apiBase,
+    token,
+    "POST",
+    "/v1/merchant-profile/verify-domain",
+  );
+}
+
+/** POST /v1/links/{id}/initiate — x402 envelope (HTTP 402 on success). */
+export async function initiateLinkPayment(
+  apiBase: string,
+  linkId: string,
+): Promise<PayLinkInitiateResponse> {
+  const res = await fetch(
+    `${apiBase}/v1/links/${encodeURIComponent(linkId)}/initiate`,
+    { method: "POST", headers: { "User-Agent": USER_AGENT } },
+  );
+  if (res.status === 402 || res.ok) {
+    return (await res.json()) as PayLinkInitiateResponse;
+  }
+  throw new Error(await errorMessage(res));
+}
+
+/** POST /v1/links/{id}/claim — record the on-chain tx against the link. */
+export async function claimLinkPayment(
+  apiBase: string,
+  linkId: string,
+  txHash: string,
+): Promise<PayLinkClaimResponse> {
+  const res = await fetch(
+    `${apiBase}/v1/links/${encodeURIComponent(linkId)}/claim`,
+    {
+      method: "POST",
+      headers: { "User-Agent": USER_AGENT, "Content-Type": "application/json" },
+      body: JSON.stringify({ tx_hash: txHash }),
+    },
+  );
+  if (!res.ok) throw new Error(await errorMessage(res));
+  return (await res.json()) as PayLinkClaimResponse;
 }
