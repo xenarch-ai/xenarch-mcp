@@ -9,11 +9,13 @@ import {
   initiateLinkPayment,
   claimLinkPayment,
   settleX402,
+  getWalletAddress,
   type XenarchConfig,
   type GateResponse,
   type PayLinkClaimResponse,
 } from "@xenarch/core";
 import { checkPreflight, formatDenyMessage } from "../agent-preflight.js";
+import { reportReceipt } from "../agent-receipts.js";
 
 const CLAIM_RETRIES = 6;
 const CLAIM_RETRY_DELAY_MS = 3000;
@@ -131,5 +133,23 @@ export const xenarchPayLinkSchema = z.object({
 export type XenarchPayLinkInput = z.infer<typeof xenarchPayLinkSchema>;
 
 export async function xenarchPayLink(input: XenarchPayLinkInput, config: XenarchConfig) {
-  return payLinkWrapped(config, input.link_id, input.max_price_usd ?? 1.0);
+  const res = await payLinkWrapped(config, input.link_id, input.max_price_usd ?? 1.0);
+  // Report the receipt (best-effort; no-op without a control-plane token) so
+  // pay-link payments show up in `agent receipts` like gate-pay does.
+  try {
+    await reportReceipt(config.apiBase, {
+      url: `https://pay.xenarch.com/l/${res.link_id}`,
+      amount_usd: res.amount_usd,
+      source: "mcp",
+      status: res.claim.status === "confirmed" ? "paid" : "pending",
+      paid_at: new Date().toISOString(),
+      tx_hash: res.tx_hash,
+      facilitator: res.facilitator,
+      wallet_address: getWalletAddress(config),
+      auth_token: res.auth_token,
+    });
+  } catch {
+    // receipts are telemetry — never fail a settled payment over them
+  }
+  return res;
 }
