@@ -45,6 +45,24 @@ export async function loadConfig(): Promise<LoadConfigResult> {
     config.apiBase = rawCfg.api_base;
   }
 
+  // The CLI stores the signing key nested under `wallet.private_key` for a
+  // local wallet. Adopt it so the MCP signs pay-links with the wallet its
+  // SIWE session belongs to — otherwise we fall through to generating a fresh
+  // throwaway key below and the platform rejects create with a signature
+  // mismatch (recovered != session wallet). A `walletconnect` wallet has no
+  // local key, so it's intentionally skipped. XENARCH_PRIVATE_KEY still
+  // overrides below for agents that bring their own key.
+  if (
+    !config.privateKey &&
+    rawCfg.wallet &&
+    typeof rawCfg.wallet === "object"
+  ) {
+    const wallet = rawCfg.wallet as Record<string, unknown>;
+    if (wallet.type === "local" && typeof wallet.private_key === "string") {
+      config.privateKey = wallet.private_key;
+    }
+  }
+
   if (!config.privateKey) {
     try {
       const raw = await readFile(WALLET_FILE, "utf-8");
