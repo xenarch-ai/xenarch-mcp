@@ -39,11 +39,11 @@
           "name": "XENARCH_NETWORK"
         },
         {
-          "description": "Max USD to auto-approve without prompting",
+          "description": "Max USD per call to auto-approve without prompting",
           "isRequired": false,
           "format": "string",
           "isSecret": false,
-          "name": "XENARCH_AUTO_APPROVE_MAX"
+          "name": "XENARCH_MAX_PAYMENT_USD"
         }
       ]
     },
@@ -78,11 +78,11 @@
           "name": "XENARCH_NETWORK"
         },
         {
-          "description": "Max USD to auto-approve without prompting",
+          "description": "Max USD per call to auto-approve without prompting",
           "isRequired": false,
           "format": "string",
           "isSecret": false,
-          "name": "XENARCH_AUTO_APPROVE_MAX"
+          "name": "XENARCH_MAX_PAYMENT_USD"
         },
         {
           "description": "Port for HTTP server (default: 3000)",
