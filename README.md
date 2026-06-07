@@ -33,13 +33,66 @@ No API keys. No signup. The agent wallet only ever needs USDC — no ETH, no gas
 
 ## MCP tools
 
-Three tools for AI agents:
+29 tools across three groups. Group 1 (discovery & payments) works with just a
+wallet. Groups 2 and 3 (control plane + merchant) manage your Xenarch account and
+need a SIWE session — run `xenarch agent login` once (see [Account tools auth](#account-tools-auth)).
+
+### 1. Discovery & payments — agent wallet only
 
 | Tool | Description |
 |------|-------------|
 | `xenarch_check_gate` | Check if a URL/domain has an x402 payment gate. Returns the accepted payment requirements — price, asset, network, seller wallet. |
-| `xenarch_pay` | Pay for gated content. Signs an EIP-3009 USDC transfer, settles on-chain, returns the tx hash and the gated content. |
-| `xenarch_get_history` | View past payments made by this wallet. |
+| `xenarch_pay` | Pay for an x402-gated URL. Signs an EIP-3009 USDC transfer, settles on-chain, returns the tx hash and the gated content. |
+| `xenarch_pay_link` | Pay a Xenarch pay-link by id (`pay.xenarch.com/l/<id>`): fetches the envelope, settles USDC on Base, confirms with the link. |
+| `xenarch_get_history` | View past payments made by this wallet (totals, per-domain, pagination). |
+
+### 2. Agent control plane — manage your spending agent (SIWE session)
+
+Caps, scope, kill-switch, and API keys for the operator's agent. Privileged
+(loosening) operations require `confirm: true`; tightening is free.
+
+| Tool | Description |
+|------|-------------|
+| `xenarch_agent_login` | Browser-wallet sign-in to the control plane. Returns a link; open it, approve, call again to finish. The 7-day session powers every other `xenarch_agent_*` tool. |
+| `xenarch_agent_status` | Agent profile (name, paused state) + spend summary for a period. Read-only. |
+| `xenarch_agent_get_caps` | Read spending caps (per-tx, daily, monthly) + remaining headroom. Read-only. |
+| `xenarch_agent_set_caps` | Set caps in USD (`none` disables an axis). Raising/removing a cap needs `confirm: true`; tightening is free. |
+| `xenarch_agent_reset_day_cap` | Reset today's daily-spend counter to the full daily cap. |
+| `xenarch_agent_get_scope` | Read scope: default posture (allow/deny) + the rule list. Read-only. |
+| `xenarch_agent_add_scope_rule` | Add an allow/deny rule. `deny` tightens (free); `allow` loosens (needs `confirm`). |
+| `xenarch_agent_remove_scope_rule` | Remove a rule by id/prefix. Removing a `deny` loosens scope (needs `confirm`). |
+| `xenarch_agent_set_default_scope` | Set the posture for unmatched URLs. `deny` tightens; `allow` loosens (needs `confirm`). |
+| `xenarch_agent_pause` | Kill switch — block all of the agent's payments immediately. No confirm. |
+| `xenarch_agent_resume` | Lift the pause (needs `confirm`). |
+| `xenarch_agent_list_keys` | List the agent's `xa_live_` API keys (id, label, last-used, revoked). Never returns plaintext. Read-only. |
+| `xenarch_agent_create_key` | Issue a new `xa_live_` key (plaintext returned once). Needs `confirm`. |
+| `xenarch_agent_rotate_key` | Rotate a key by id/prefix — invalidates the old secret, returns a new one once. Needs `confirm`. |
+| `xenarch_agent_revoke_key` | Permanently revoke a key by id/prefix. Needs `confirm`. |
+| `xenarch_agent_get_receipts` | List the agent's payment receipts with filters (period, status, source, domain). Read-only. |
+
+### 3. Merchant — get paid (SIWE session)
+
+Create and manage pay-links, see payments and subscribers, set the merchant
+profile. Same SIWE session as the control plane.
+
+| Tool | Description |
+|------|-------------|
+| `xenarch_create_link` | Create a pay-link. VALIDATE-FIRST: `mode:'validate'` reports missing fields; then `mode:'create'` + `confirm:true` signs + creates. Amount is USDC (max 1.00). |
+| `xenarch_list_links` | List the merchant's pay-links (newest first), cursor-paginated. Read-only. |
+| `xenarch_get_link` | Get one pay-link's detail (status, params, stats) by id. Read-only. |
+| `xenarch_revoke_link` | Revoke a pay-link by id so it can no longer be paid. Needs `confirm`. |
+| `xenarch_list_payments` | List payments received across the merchant's links (newest first), cursor-paginated. Read-only. |
+| `xenarch_list_subscribers` | List subscribers across subscription links, with filters (link_id, status, mode). Read-only. |
+| `xenarch_get_merchant_profile` | Get the merchant profile (issuer identity, domain-verification status). Read-only. |
+| `xenarch_update_merchant_profile` | Update the merchant profile (name, site, email, address, tax id, brand color, logo, payout rhythm). Whole-state upsert. |
+| `xenarch_verify_domain` | Verify the merchant's domain via its `_xenarch.<site>` DNS TXT record. Set the site first via `xenarch_update_merchant_profile`. |
+
+<a id="account-tools-auth"></a>
+### Account tools auth
+
+- **Payments** (group 1) need only a funded wallet (`XENARCH_PRIVATE_KEY`).
+- **Control plane + merchant** (groups 2–3) need a SIWE session. Run `xenarch agent login` once — it writes a 7-day `session_token` to `~/.xenarch/config.json`, which the MCP server reads automatically. Re-run when it expires, or call `xenarch_agent_login` directly from your client.
+- Optionally set **`XENARCH_API_TOKEN`** (an `xa_live_` agent key) so `xenarch_pay` is enforced against your caps/scope and every MCP payment shows up in the dashboard receipts feed. Without it, payments still work but skip control-plane enforcement.
 
 ### Example responses
 
@@ -148,7 +201,11 @@ chmod 600 ~/.xenarch/wallet.json
 claude mcp add xenarch -- npx @xenarch/agent-mcp
 ```
 
-Or add to Claude Desktop / Cursor / any MCP client:
+Or add the same JSON to any MCP client's config file:
+
+- **Claude Desktop** — `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) / `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
+- **Cursor** — `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (per-project)
+- **Cline** (VS Code) — the MCP Servers panel → "Configure MCP Servers", or `cline_mcp_settings.json`
 
 ```json
 {
@@ -157,7 +214,8 @@ Or add to Claude Desktop / Cursor / any MCP client:
       "command": "npx",
       "args": ["@xenarch/agent-mcp"],
       "env": {
-        "XENARCH_PRIVATE_KEY": "0xYOUR_PRIVATE_KEY"
+        "XENARCH_PRIVATE_KEY": "0xYOUR_PRIVATE_KEY",
+        "XENARCH_API_TOKEN": "xa_live_…optional, enforces caps/scope"
       }
     }
   }
@@ -166,15 +224,21 @@ Or add to Claude Desktop / Cursor / any MCP client:
 
 3. Fund the wallet with USDC on Base. That's it — no ETH, no other token needed.
 
+4. (Optional) To use the control-plane + merchant tools, run `xenarch agent login` once to create a SIWE session.
+
 ## Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `XENARCH_PRIVATE_KEY` | — | Wallet private key (overrides config file) |
+| `XENARCH_API_TOKEN` | — | Agent `xa_live_` key. Set it to enforce `xenarch_pay` against your caps/scope and feed the dashboard receipts. Optional — payments work without it. |
 | `XENARCH_RPC_URL` | `https://mainnet.base.org` | Base RPC endpoint |
 | `XENARCH_API_BASE` | `https://xenarch.dev` | Xenarch platform API |
 | `XENARCH_NETWORK` | `base` | Network (`base` or `base-sepolia`) |
 | `XENARCH_MAX_PAYMENT_USD` | — | Max USD per call to auto-approve without prompting (defaults to 0.1 USDC inside x402-fetch) |
+
+The control-plane + merchant tools don't use an env var for auth — they read the
+SIWE `session_token` that `xenarch agent login` writes to `~/.xenarch/config.json`.
 
 ## Examples
 
