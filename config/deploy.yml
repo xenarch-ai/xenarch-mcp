@@ -5,7 +5,7 @@ image: emdevries/xenarch-mcp
 servers:
   web:
     hosts:
-      - 5.78.183.39
+      - <%= ENV.fetch("DEPLOY_HOST") %>   # set in .kamal/secrets (gitignored) — IP kept out of this public repo
 
 registry:
   username: emdevries
