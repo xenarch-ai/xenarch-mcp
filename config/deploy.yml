@@ -5,7 +5,8 @@ image: emdevries/xenarch-mcp
 servers:
   web:
     hosts:
-      - 5.78.183.39
+      # Prod IP kept out of this public repo. Prefer $DEPLOY_HOST, else read the gitignored .kamal/secrets.
+      - <%= ENV["DEPLOY_HOST"] || File.read(".kamal/secrets")[/^DEPLOY_HOST=(.+)$/, 1].strip %>
 
 registry:
   username: emdevries
