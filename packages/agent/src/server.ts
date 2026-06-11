@@ -5,6 +5,7 @@ import type { XenarchConfig, LoadConfigResult } from "@xenarch/core";
 import { checkGateSchema, checkGate } from "./tools/check-gate.js";
 import { paySchema, pay } from "./tools/pay.js";
 import { getHistorySchema, getHistory } from "./tools/get-history.js";
+import { walletStatusSchema, walletStatus } from "./tools/wallet-status.js";
 import * as cp from "./tools/control-plane.js";
 import * as login from "./tools/login.js";
 import * as merchant from "./tools/merchant.js";
@@ -30,11 +31,11 @@ export function createServer(): McpServer {
           text: JSON.stringify(
             {
               description:
-                "Non-custodial x402 MCP server. AI agents pay HTTP 402–gated APIs with USDC micropayments on Base L2 (up to $1 per call), settled agent-to-publisher direct on-chain. 0% Xenarch fee — no Xenarch contract in the money flow. The agent wallet only ever holds USDC; no ETH or other gas coin needed.",
+                "Non-custodial x402 MCP server. AI agents pay HTTP 402–gated APIs with USDC on Base L2, settled agent-to-publisher direct on-chain. 0% Xenarch fee — no Xenarch contract in the money flow. The agent wallet only ever holds USDC; no ETH or other gas coin needed. A local per-call cap (default $1, set XENARCH_MAX_PAYMENT_USD to change; 0 disables) guards standalone use; connect XENARCH_API_TOKEN for managed per-tx/daily/monthly caps.",
               supported_networks: ["base", "base-sepolia"],
               supported_assets: ["USDC"],
               protocol: "x402",
-              max_payment_usd: 1.0,
+              default_max_payment_usd: 1.0,
               flow: [
                 "1. Agent calls xenarch_check_gate to discover if a URL has an x402 payment gate",
                 "2. Gate returns price, accepted payment requirements, seller wallet, network and asset",
@@ -157,6 +158,40 @@ export function createServer(): McpServer {
             {
               type: "text",
               text: `Error executing payment: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.tool(
+    "xenarch_wallet_status",
+    "Show the agent's local payment wallet: its address, USDC balance on Base, and whether it's funded. Use this to find the address the user needs to top up with USDC, or to check the balance before paying. This is the wallet that signs payments — separate from the wallet used to sign in to the dashboard.",
+    walletStatusSchema.shape,
+    {
+      title: "Wallet Status",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    async (input) => {
+      try {
+        const config = await getConfig();
+        const result = await walletStatus(input, config);
+        return {
+          content: withWalletNotice([
+            { type: "text", text: JSON.stringify(result, null, 2) },
+          ]),
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error reading wallet status: ${error instanceof Error ? error.message : String(error)}`,
             },
           ],
           isError: true,

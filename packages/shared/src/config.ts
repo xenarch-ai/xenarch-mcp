@@ -86,7 +86,13 @@ export async function loadConfig(): Promise<LoadConfigResult> {
     config.network = process.env.XENARCH_NETWORK as "base" | "base-sepolia";
   }
   if (process.env.XENARCH_MAX_PAYMENT_USD) {
-    config.maxPaymentUsd = parseFloat(process.env.XENARCH_MAX_PAYMENT_USD);
+    // Fail safe: a malformed value (typo, non-numeric, negative) must NOT
+    // silently disable the cap — keep the default. `0` is the documented
+    // opt-out and is allowed through.
+    const parsed = parseFloat(process.env.XENARCH_MAX_PAYMENT_USD);
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      config.maxPaymentUsd = parsed;
+    }
   }
   if (process.env.XENARCH_SESSION_TOKEN) {
     config.sessionToken = process.env.XENARCH_SESSION_TOKEN;

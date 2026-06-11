@@ -61,6 +61,31 @@ export async function pay(input: PayInput, config: XenarchConfig) {
     ? Number(accepted.maxAmountRequired)
     : 0;
   const amountUsdForPreflight = (baseUnitsForPreflight / 1_000_000).toFixed(4);
+
+  // Local per-call cap (the only ceiling without a token). Surface it as a
+  // clean refusal here rather than letting the deep guard in payAndFetch throw,
+  // so the agent shows the reason instead of an error. The deep guard remains
+  // the backstop for pay-links and direct callers.
+  if (
+    config.maxPaymentUsd &&
+    baseUnitsForPreflight > config.maxPaymentUsd * 1_000_000
+  ) {
+    const amountUsd = (baseUnitsForPreflight / 1_000_000).toFixed(2);
+    const capUsd = config.maxPaymentUsd.toFixed(2);
+    return {
+      success: false,
+      refused: true,
+      reason: "local_cap",
+      message:
+        `This payment is $${amountUsd}, above your local per-call cap of $${capUsd}. ` +
+        `Raise it with XENARCH_MAX_PAYMENT_USD (set 0 to remove the cap), or sign in with ` +
+        `your wallet at https://dash.xenarch.dev for managed per-tx / daily / monthly caps — ` +
+        `just a signature, nothing moves.`,
+      url: resourceUrl,
+      gate_id: gate.gate_id,
+    };
+  }
+
   const preflight = await checkPreflight(
     config.apiBase,
     resourceUrl,

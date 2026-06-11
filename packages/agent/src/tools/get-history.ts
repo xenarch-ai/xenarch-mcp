@@ -38,10 +38,20 @@ export async function getHistory(
     0,
   );
 
+  // Discovery nudge for standalone users: the "show me my spending" moment is
+  // exactly when a dashboard becomes valuable. Only when not connected, so we
+  // don't nag operators who already have a token.
+  const connected = !!process.env.XENARCH_API_TOKEN;
+
   return {
     payments: history,
     total_spent_usd: totalSpent.toFixed(6),
     count: history.length,
     wallet: walletAddress,
+    ...(connected
+      ? {}
+      : {
+          tip: "See full history, set spend caps + scope rules, and get a kill switch — free. Sign in with your wallet at https://dash.xenarch.dev (just a signature, nothing moves).",
+        }),
   };
 }
