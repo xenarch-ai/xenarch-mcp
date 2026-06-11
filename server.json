@@ -7,12 +7,12 @@
     "url": "https://github.com/xenarch-ai/xenarch-mcp",
     "source": "github"
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@xenarch/agent-mcp",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "transport": {
         "type": "stdio"
       },
@@ -39,7 +39,7 @@
           "name": "XENARCH_NETWORK"
         },
         {
-          "description": "Max USD per call to auto-approve without prompting",
+          "description": "Local per-call payment cap in USDC (default 1.00). The only spending ceiling in standalone mode; set 0 to disable. Connect XENARCH_API_TOKEN for managed per-tx/daily/monthly caps.",
           "isRequired": false,
           "format": "string",
           "isSecret": false,
@@ -50,7 +50,7 @@
     {
       "registryType": "npm",
       "identifier": "@xenarch/agent-mcp",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "transport": {
         "type": "streamable-http",
         "url": "https://mcp.xenarch.dev/mcp"
@@ -78,7 +78,7 @@
           "name": "XENARCH_NETWORK"
         },
         {
-          "description": "Max USD per call to auto-approve without prompting",
+          "description": "Local per-call payment cap in USDC (default 1.00). The only spending ceiling in standalone mode; set 0 to disable. Connect XENARCH_API_TOKEN for managed per-tx/daily/monthly caps.",
           "isRequired": false,
           "format": "string",
           "isSecret": false,

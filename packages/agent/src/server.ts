@@ -14,7 +14,7 @@ import * as payLink from "./tools/pay-link.js";
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "xenarch",
-    version: "1.0.0",
+    version: "1.1.0",
   });
 
   server.resource(
