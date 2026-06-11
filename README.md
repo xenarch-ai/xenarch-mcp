@@ -90,9 +90,9 @@ profile. Same SIWE session as the control plane.
 <a id="account-tools-auth"></a>
 ### Account tools auth
 
-- **Payments** (group 1) need only a funded wallet (`XENARCH_PRIVATE_KEY`).
+- **Payments** (group 1) need only a funded wallet (`XENARCH_PRIVATE_KEY`). No Xenarch account required — the MCP generates a local wallet if you don't supply one, and pays permissionlessly. A local per-call cap (`XENARCH_MAX_PAYMENT_USD`, default $1) is the only spending ceiling in this mode.
 - **Control plane + merchant** (groups 2–3) need a SIWE session. Run `xenarch agent login` once — it writes a 7-day `session_token` to `~/.xenarch/config.json`, which the MCP server reads automatically. Re-run when it expires, or call `xenarch_agent_login` directly from your client.
-- Optionally set **`XENARCH_API_TOKEN`** (an `xa_live_` agent key) so `xenarch_pay` is enforced against your caps/scope and every MCP payment shows up in the dashboard receipts feed. Without it, payments still work but skip control-plane enforcement.
+- Optionally set **`XENARCH_API_TOKEN`** (an `xa_live_` agent key) so `xenarch_pay` is enforced against your **managed** caps/scope and every MCP payment shows up in the dashboard receipts feed. The dashboard is free — sign in with your wallet at [dash.xenarch.dev](https://dash.xenarch.dev) (just a signature, nothing moves) for per-tx / daily / monthly caps, scope rules, a kill switch, and full history. Without a token, payments still work but skip managed enforcement. Note: the dashboard sign-in wallet is your *identity* — separate from the agent's local spending wallet.
 
 ### Example responses
 
@@ -235,7 +235,7 @@ Or add the same JSON to any MCP client's config file:
 | `XENARCH_RPC_URL` | `https://mainnet.base.org` | Base RPC endpoint |
 | `XENARCH_API_BASE` | `https://xenarch.dev` | Xenarch platform API |
 | `XENARCH_NETWORK` | `base` | Network (`base` or `base-sepolia`) |
-| `XENARCH_MAX_PAYMENT_USD` | — | Max USD per call to auto-approve without prompting (defaults to 0.1 USDC inside x402-fetch) |
+| `XENARCH_MAX_PAYMENT_USD` | `1.00` | Local per-call payment cap (USDC). The only spending ceiling in standalone mode — `xenarch_pay` refuses any single payment above it. Set `0` to remove the cap. For managed per-tx / daily / monthly caps, connect `XENARCH_API_TOKEN`. |
 
 The control-plane + merchant tools don't use an env var for auth — they read the
 SIWE `session_token` that `xenarch agent login` writes to `~/.xenarch/config.json`.

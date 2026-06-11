@@ -34,6 +34,26 @@ const TRANSFER_WITH_AUTHORIZATION_TYPES = {
 const GATE_ID_HEADER = "X-Xenarch-Gate-Id";
 const TX_HASH_HEADER = "X-Xenarch-Tx-Hash";
 
+// Local (no-token) per-call spending guard. The $1 default lives in
+// DEFAULT_CONFIG; override with XENARCH_MAX_PAYMENT_USD (0 removes it). This
+// is the only ceiling in standalone mode — managed per-tx/daily/monthly caps
+// require an XENARCH_API_TOKEN. The pay tool checks this earlier and returns a
+// clean refusal; this is the backstop covering pay-links and direct callers.
+function enforceLocalCap(amount: bigint, config: XenarchConfig): void {
+  if (!config.maxPaymentUsd) return;
+  const cap = parseUnits(config.maxPaymentUsd.toString(), USDC_DECIMALS);
+  if (amount > cap) {
+    const amountUsd = (Number(amount) / 10 ** USDC_DECIMALS).toFixed(2);
+    const capUsd = config.maxPaymentUsd.toFixed(2);
+    throw new Error(
+      `Refused: this payment is $${amountUsd}, above your local per-call cap of $${capUsd}. ` +
+        `Raise it with XENARCH_MAX_PAYMENT_USD (set 0 to remove the cap), or sign in with your ` +
+        `wallet at https://dash.xenarch.dev for managed per-tx / daily / monthly caps — just a ` +
+        `signature, nothing moves.`,
+    );
+  }
+}
+
 interface AcceptEntry {
   scheme?: string;
   network?: string;
@@ -186,14 +206,7 @@ export async function settleX402(
   }
 
   const amount = BigInt(accept.maxAmountRequired);
-  if (config.maxPaymentUsd) {
-    const cap = parseUnits(config.maxPaymentUsd.toString(), USDC_DECIMALS);
-    if (amount > cap) {
-      throw new Error(
-        `Payment ${amount} exceeds maxPaymentUsd cap ${cap} (USDC base units).`,
-      );
-    }
-  }
+  enforceLocalCap(amount, config);
 
   const from = account.address;
   const validAfter = 0n;
@@ -281,18 +294,11 @@ export async function payAndFetch(
   }
 
   // The gate's `maxAmountRequired` is already in base units (e.g.
-  // "3000" = $0.003 USDC at 6 decimals). Trust it; if a caller-side cap
-  // is set, the agent control plane preflight should have caught it
-  // upstream.
+  // "3000" = $0.003 USDC at 6 decimals). The local per-call cap is the
+  // standalone-mode ceiling; managed caps (with a token) are enforced
+  // upstream by the control-plane preflight.
   const amount = BigInt(accept.maxAmountRequired);
-  if (config.maxPaymentUsd) {
-    const cap = parseUnits(config.maxPaymentUsd.toString(), USDC_DECIMALS);
-    if (amount > cap) {
-      throw new Error(
-        `Payment ${amount} exceeds maxPaymentUsd cap ${cap} (USDC base units).`,
-      );
-    }
-  }
+  enforceLocalCap(amount, config);
 
   const from = account.address;
   const validAfter = 0n;

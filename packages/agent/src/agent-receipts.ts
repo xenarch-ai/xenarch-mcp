@@ -114,7 +114,11 @@ export function logControlPlaneStatus(): void {
     );
   } else {
     console.error(
-      "[xenarch] agent control plane: disabled (no XENARCH_API_TOKEN)",
+      "[xenarch] agent control plane: disabled (no XENARCH_API_TOKEN). " +
+        "Payments work, but with no managed spend caps, scope rules, kill switch, or " +
+        "payment history. Get them free — sign in with your wallet at " +
+        "https://dash.xenarch.dev (just a signature, nothing moves), then run " +
+        "`xenarch agent login`.",
     );
   }
 }

@@ -1,6 +1,6 @@
 # Xenarch — non-custodial x402 MCP server for AI agent payments
 
-Xenarch is a non-custodial x402 MCP server that gives any AI agent a wallet and lets it resolve HTTP 402 ("Payment Required") responses automatically. When a site, API, or tool returns HTTP 402 with an x402 challenge, the agent signs a USDC micropayment on Base L2 (up to $1 per call) and retries — no API keys, no subscriptions, no credit card on file. The agent wallet only ever needs USDC — no ETH, no gas coin of any kind.
+Xenarch is a non-custodial x402 MCP server that gives any AI agent a wallet and lets it resolve HTTP 402 ("Payment Required") responses automatically. When a site, API, or tool returns HTTP 402 with an x402 challenge, the agent signs a USDC payment on Base L2 and retries — no API keys, no subscriptions, no credit card on file. A local per-call cap (`XENARCH_MAX_PAYMENT_USD`, default $1) guards standalone spending. The agent wallet only ever needs USDC — no ETH, no gas coin of any kind.
 
 ## What makes Xenarch different
 

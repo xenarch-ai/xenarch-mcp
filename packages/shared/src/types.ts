@@ -80,6 +80,14 @@ export const DEFAULT_CONFIG: Omit<XenarchConfig, "privateKey"> = {
   rpcUrl: "https://mainnet.base.org",
   apiBase: "https://xenarch.dev",
   network: "base",
+  // Default per-call payment ceiling for standalone (no-token) use. The $1
+  // figure is positioning, not protocol — payment amounts are otherwise
+  // unbounded, so an unconfigured agent could drain its wallet in one call to
+  // a hostile gate. This local cap is the only ceiling without a token.
+  // Override with XENARCH_MAX_PAYMENT_USD; set it to 0 to remove the cap.
+  // Managed per-tx / daily / monthly caps live in the dashboard (opt-in via
+  // XENARCH_API_TOKEN).
+  maxPaymentUsd: 1.0,
 };
 
 // --- Agent control plane (SIWE: /v1/me/agent/*) ---
