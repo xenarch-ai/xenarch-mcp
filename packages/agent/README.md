@@ -105,8 +105,8 @@ Open the Cline panel → MCP Servers → Add. Same JSON. Cline reloads servers o
 
 | Tool | What it does |
 |---|---|
-| `xenarch_check_gate` | Probe a URL for an x402 challenge without paying. Returns price + seller + facilitators. |
-| `xenarch_pay` | Pay an x402-gated URL with USDC on Base L2 and return the gated content. Signs EIP-3009 `transferWithAuthorization`, settles via the publisher's chosen facilitator, replays with the canonical Xenarch headers. |
+| `xenarch_check_gate` | Probe a URL for an x402 challenge without paying. Returns price + seller + settlement providers. |
+| `xenarch_pay` | Pay an x402-gated URL with USDC on Base L2 and return the gated content. Signs EIP-3009 `transferWithAuthorization`, settles via the publisher's chosen settlement provider, replays with the canonical Xenarch headers. |
 | `xenarch_get_history` | List past USDC micropayments from this wallet through Xenarch. Filter by domain. |
 
 ## What refusals look like
