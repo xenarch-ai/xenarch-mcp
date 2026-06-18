@@ -99,7 +99,7 @@ Open the Cline panel → MCP Servers → Add. Same JSON. Cline reloads servers o
 | `XENARCH_API_BASE` | `https://xenarch.dev` | Xenarch platform API |
 | `XENARCH_NETWORK` | `base` | Network (`base` or `base-sepolia`) |
 | `XENARCH_MAX_PAYMENT_USD` | — | Max USD per call to auto-approve without prompting |
-| `XENARCH_API_TOKEN` | — | Optional `xa_live_*` token from https://dash.xenarch.dev/agent/settings. When set, every `xenarch_pay` call **preflights** with the platform (caps + scope + kill switch), reports the receipt back, and on settle failure POSTs a `status='failed'` receipt with the auth_token so the platform refunds the cap charge. Without it, the server works as before — preflight + receipt reporting are opt-in. |
+| `XENARCH_API_TOKEN` | — | **Required** `xa_live_*` token from https://dash.xenarch.dev/agent/settings. Every `xenarch_pay` call **preflights** with the platform (caps + scope + kill switch), reports the receipt back, and on settle failure POSTs a `status='failed'` receipt with the auth_token so the platform refunds the cap charge. **Without it, `xenarch_pay` refuses to pay (fail-closed)** — an unlinked agent has no caps, so it must not settle uncapped. |
 
 ## Tools the model sees
 
@@ -111,7 +111,7 @@ Open the Cline panel → MCP Servers → Add. Same JSON. Cline reloads servers o
 
 ## What refusals look like
 
-When `XENARCH_API_TOKEN` is set and the control plane refuses, `xenarch_pay` returns a structured refusal as tool content (not a thrown error) so the LLM surfaces it cleanly:
+When the control plane refuses (or no `XENARCH_API_TOKEN` is set), `xenarch_pay` returns a structured refusal as tool content (not a thrown error) so the LLM surfaces it cleanly:
 
 ```json
 {

@@ -9,7 +9,8 @@
 // dashboard URL cleanly instead of choking on an exception.
 //
 // Fail-closed: token configured + control plane unreachable → refuse.
-// No token → bypass (Phase-1 backwards compat).
+// XEN-480: no token → ALSO refuse (an unlinked agent has no caps/scope,
+// so the official client must not pay uncapped).
 
 const ENV_TOKEN = "XENARCH_API_TOKEN";
 const PREFLIGHT_TIMEOUT_MS = 5000;
@@ -43,22 +44,17 @@ export interface PreflightDeny {
 
 export interface PreflightUnreachable {
   ok: false;
-  reason: "control_plane_unreachable";
+  // "not_connected" (XEN-480: no XENARCH_API_TOKEN → fail-closed, the agent
+  // isn't linked so it has no caps/scope) or "control_plane_unreachable"
+  // (token set but the platform didn't answer — also fail-closed).
+  reason: "control_plane_unreachable" | "not_connected";
   detail: string;
-}
-
-export interface PreflightBypassed {
-  ok: true;
-  auth_token: null;
-  expires_in: 0;
-  bypassed: true;
 }
 
 export type PreflightResult =
   | PreflightAllow
   | PreflightDeny
-  | PreflightUnreachable
-  | PreflightBypassed;
+  | PreflightUnreachable;
 
 export function formatDenyMessage(result: PreflightDeny): string {
   if (result.reason === "paused") {
@@ -148,7 +144,14 @@ export async function checkPreflight(
 ): Promise<PreflightResult> {
   const token = process.env[ENV_TOKEN];
   if (!token) {
-    return { ok: true, auth_token: null, expires_in: 0, bypassed: true };
+    // XEN-480: fail-closed. An unlinked agent has no caps/scope, so the
+    // MCP server refuses to pay rather than settling uncapped.
+    return {
+      ok: false,
+      reason: "not_connected",
+      detail:
+        "Not connected to the Xenarch control plane — set XENARCH_API_TOKEN (run `xenarch agent login`) so payments are capped.",
+    };
   }
 
   const controller = new AbortController();
