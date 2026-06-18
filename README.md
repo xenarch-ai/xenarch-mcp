@@ -90,9 +90,9 @@ profile. Same SIWE session as the control plane.
 <a id="account-tools-auth"></a>
 ### Account tools auth
 
-- **Payments** (group 1) need only a funded wallet (`XENARCH_PRIVATE_KEY`). No Xenarch account required — the MCP generates a local wallet if you don't supply one, and pays permissionlessly. A local per-call cap (`XENARCH_MAX_PAYMENT_USD`, default $1) is the only spending ceiling in this mode.
+- **Payments** (group 1) need a funded wallet (`XENARCH_PRIVATE_KEY`) **and** a control-plane link (`XENARCH_API_TOKEN`) — the official MCP refuses to pay without the token (XEN-480: an unlinked agent has no caps). A local per-call cap (`XENARCH_MAX_PAYMENT_USD`, default $1) applies on top of the managed per-tx / daily / monthly caps.
 - **Control plane + merchant** (groups 2–3) need a SIWE session. Run `xenarch agent login` once — it writes a 7-day `session_token` to `~/.xenarch/config.json`, which the MCP server reads automatically. Re-run when it expires, or call `xenarch_agent_login` directly from your client.
-- Optionally set **`XENARCH_API_TOKEN`** (an `xa_live_` agent key) so `xenarch_pay` is enforced against your **managed** caps/scope and every MCP payment shows up in the dashboard receipts feed. The dashboard is free — sign in with your wallet at [dash.xenarch.dev](https://dash.xenarch.dev) (just a signature, nothing moves) for per-tx / daily / monthly caps, scope rules, a kill switch, and full history. Without a token, payments still work but skip managed enforcement. Note: the dashboard sign-in wallet is your *identity* — separate from the agent's local spending wallet.
+- Set **`XENARCH_API_TOKEN`** (an `xa_live_` agent key) so `xenarch_pay` is enforced against your **managed** caps/scope and every MCP payment shows up in the dashboard receipts feed. The dashboard is free — sign in with your wallet at [dash.xenarch.dev](https://dash.xenarch.dev) (just a signature, nothing moves) for per-tx / daily / monthly caps, scope rules, a kill switch, and full history. **Without the token, `xenarch_pay` refuses to pay (fail-closed)** so an unlinked agent can't settle uncapped. Note: the dashboard sign-in wallet is your *identity* — separate from the agent's local spending wallet.
 
 ### Example responses
 
@@ -231,7 +231,7 @@ Or add the same JSON to any MCP client's config file:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `XENARCH_PRIVATE_KEY` | — | Wallet private key (overrides config file) |
-| `XENARCH_API_TOKEN` | — | Agent `xa_live_` key. Set it to enforce `xenarch_pay` against your caps/scope and feed the dashboard receipts. Optional — payments work without it. |
+| `XENARCH_API_TOKEN` | — | **Required.** Agent `xa_live_` key. Enforces `xenarch_pay` against your caps/scope and feeds the dashboard receipts. Without it, `xenarch_pay` refuses to pay (fail-closed). |
 | `XENARCH_RPC_URL` | `https://mainnet.base.org` | Base RPC endpoint |
 | `XENARCH_API_BASE` | `https://xenarch.dev` | Xenarch platform API |
 | `XENARCH_NETWORK` | `base` | Network (`base` or `base-sepolia`) |

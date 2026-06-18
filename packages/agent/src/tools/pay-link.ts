@@ -84,7 +84,8 @@ export async function payLinkWrapped(
         : formatDenyMessage(preflight);
     throw new Error(reason);
   }
-  const authToken = "bypassed" in preflight ? null : preflight.auth_token;
+  // XEN-480: preflight is allowed here (the !ok branch threw above).
+  const authToken = preflight.auth_token;
 
   const gate: GateResponse = {
     gate_id: env.link_id,

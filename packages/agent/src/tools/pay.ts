@@ -108,9 +108,8 @@ export async function pay(input: PayInput, config: XenarchConfig) {
       gate_id: gate.gate_id,
     };
   }
-  if (!("bypassed" in preflight)) {
-    preflightAuthToken = preflight.auth_token;
-  }
+  // XEN-480: no more no-token bypass — preflight is allowed here.
+  preflightAuthToken = preflight.auth_token;
 
   // Sign the EIP-3009 USDC transfer authorization, submit the payment, and
   // re-fetch the resource. Returns the response body as text so the caller
