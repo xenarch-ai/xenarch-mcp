@@ -10,11 +10,18 @@ import * as cp from "./tools/control-plane.js";
 import * as login from "./tools/login.js";
 import * as merchant from "./tools/merchant.js";
 import * as payLink from "./tools/pay-link.js";
+import * as subs from "./tools/subscribers.js";
+import * as collect from "./tools/collect.js";
+import * as linksX from "./tools/links-extra.js";
+import * as hooks from "./tools/webhooks.js";
+import * as agentX from "./tools/agent-extra.js";
+import * as sites from "./tools/sites.js";
+import * as account from "./tools/account.js";
 
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "xenarch",
-    version: "1.1.0",
+    version: "1.3.0",
   });
 
   server.resource(
@@ -305,7 +312,7 @@ export function createServer(): McpServer {
   );
   registerAgentTool(
     "xenarch_agent_reset_day_cap",
-    "Reset today's daily-spend counter back to the full daily cap (recovery from accidental mid-day exhaustion).",
+    "Reset today's daily-spend counter back to the full daily cap (recovery from accidental mid-day exhaustion). Restores full spending headroom — requires confirm: true.",
     cp.agentResetDayCapSchema,
     { title: "Reset Daily Counter", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     cp.agentResetDayCap,
@@ -442,7 +449,7 @@ export function createServer(): McpServer {
   );
   registerAgentTool(
     "xenarch_update_merchant_profile",
-    "Update the merchant profile (issuer name, site, email, address, tax id, brand color, logo, payout rhythm). Only the fields you pass change; the rest are preserved (whole-state upsert).",
+    "Update the merchant profile (issuer name, site, email, address, tax id, brand color, logo, payout rhythm). Only the fields you pass change; the rest are preserved (whole-state upsert). Rewrites customer-facing identity — requires confirm: true.",
     merchant.xenarchUpdateMerchantProfileSchema,
     { title: "Update Merchant Profile", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     merchant.xenarchUpdateMerchantProfile,
@@ -454,6 +461,531 @@ export function createServer(): McpServer {
     { title: "Verify Domain", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     merchant.xenarchVerifyDomain,
   );
+  // --- Subscribers: lifecycle + collections (XEN-517) ------------------------
+  registerAgentTool(
+    "xenarch_get_subscriber",
+    "Get one subscriber's full detail (plan, cadence, renewal dates, payer, permit/metered state) by subscription id. Read-only.",
+    subs.getSubscriberSchema,
+    { title: "Get Subscriber", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    subs.getSubscriberTool,
+  );
+  registerAgentTool(
+    "xenarch_get_subscriber_charges",
+    "Read a metered subscriber's immutable charge ledger (booked + settled charges, totals, outstanding). Read-only, cursor over charge_seq.",
+    subs.getSubscriberChargesSchema,
+    { title: "Get Subscriber Charges", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    subs.getSubscriberCharges,
+  );
+  registerAgentTool(
+    "xenarch_get_subscriber_rollup",
+    "Subscriber KPIs: active count, MRR (USDC), 30-day churn. Read-only.",
+    subs.getSubscriberRollupSchema,
+    { title: "Subscriber Rollup", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    subs.getSubscriberRollup,
+  );
+  registerAgentTool(
+    "xenarch_cancel_subscriber",
+    "Cancel a subscription (merchant-initiated; reminder-mode only, 409 otherwise). Permanent. Requires confirm: true.",
+    subs.cancelSubscriberSchema,
+    { title: "Cancel Subscriber", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    subs.cancelSubscriber,
+  );
+  registerAgentTool(
+    "xenarch_suspend_subscriber",
+    "Suspend a subscription: collection attempts and dunning stop. Any mode, idempotent, no on-chain effect. Requires confirm: true.",
+    subs.suspendSubscriberSchema,
+    { title: "Suspend Subscriber", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    subs.suspendSubscriberTool,
+  );
+  registerAgentTool(
+    "xenarch_mint_manage_link",
+    "Mint a short-lived manage URL + token for a subscriber (hosted manage page). Anyone holding it can manage that subscription until expiry. Requires confirm: true.",
+    subs.mintManageLinkSchema,
+    { title: "Mint Manage Link", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    subs.mintManageLinkTool,
+  );
+  registerAgentTool(
+    "xenarch_set_period_cap",
+    "Set/raise a metered-per-period subscriber's budget (new_cap_usdc). Mints the manage token behind the scenes. Requires confirm: true.",
+    subs.setPeriodCapSchema,
+    { title: "Set Period Cap", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    subs.setPeriodCapTool,
+  );
+  registerAgentTool(
+    "xenarch_list_permit_collectable",
+    "List permit subscriptions with a cycle due now (the collectable bag): amount, owner→spender transferFrom params, permit status. Read-only.",
+    subs.listPermitCollectableSchema,
+    { title: "Permit Collectable", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    subs.listPermitCollectableTool,
+  );
+  registerAgentTool(
+    "xenarch_list_metered_collectable",
+    "List metered subscriptions with booked charges awaiting on-chain settlement (the collectable bag). Read-only.",
+    subs.listMeteredCollectableSchema,
+    { title: "Metered Collectable", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    subs.listMeteredCollectableTool,
+  );
+  registerAgentTool(
+    "xenarch_fire_permit_digest",
+    "Dev/test: drop the throttle and immediately re-send the collectable digest email for your wallet. Requires confirm: true.",
+    subs.firePermitDigestSchema,
+    { title: "Fire Permit Digest", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    subs.firePermitDigestTool,
+  );
+
+  // --- On-chain collection (XEN-517) — LOCAL-KEY wallets only ----------------
+  registerAgentTool(
+    "xenarch_permit_submit",
+    "Broadcast the buyer's signed USDC.permit on-chain to set the allowance (moves NO funds; wallet pays gas). Needs the LOCAL seller wallet key + Base ETH. Broadcasting requires confirm: true. Pass tx_hash alone to record an already-broadcast permit (recovery, record-only, no confirm needed).",
+    collect.permitSubmitSchema,
+    { title: "Submit Permit On-Chain", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    collect.permitSubmitTool,
+  );
+  registerAgentTool(
+    "xenarch_permit_collect",
+    "Collect one due permit cycle: preflights allowance/balance/simulation, broadcasts USDC.transferFrom from the LOCAL seller wallet (must be the permit spender, needs Base ETH gas), then books it. MOVES REAL MONEY — requires confirm: true PLUS expected_amount_usdc pinned from the needs_confirmation payload. If it reports transferred-but-not-booked, use xenarch_record_collect; NEVER re-run this tool for the same cycle.",
+    collect.permitCollectSchema,
+    { title: "Collect Permit Cycle", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    collect.permitCollect,
+  );
+  registerAgentTool(
+    "xenarch_metered_collect",
+    "Settle a metered subscriber's booked charges on-chain: preflight, broadcast USDC.transferFrom from the LOCAL seller wallet, book. MOVES REAL MONEY — requires confirm: true PLUS expected_amount_usdc pinned from the needs_confirmation payload. If transferred-but-not-booked, use xenarch_record_collect; NEVER re-run this tool for the same charges.",
+    collect.meteredCollectSchema,
+    { title: "Collect Metered Charges", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    collect.meteredCollect,
+  );
+  registerAgentTool(
+    "xenarch_record_collect",
+    "Recovery: book an ALREADY-broadcast transferFrom by tx hash. Never transfers — the backend dedups on tx_hash, so it is always safe to re-run.",
+    collect.recordCollectSchema,
+    { title: "Record Collect Tx", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    collect.recordCollect,
+  );
+
+  // --- Pay-link detail surface, groups, orders (XEN-517) ---------------------
+  registerAgentTool(
+    "xenarch_edit_link",
+    "Replace a pay-link's metadata object (whole-state; null clears). Requires confirm: true.",
+    linksX.editLinkSchema,
+    { title: "Edit Pay-Link Metadata", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    linksX.editLink,
+  );
+  registerAgentTool(
+    "xenarch_get_link_events",
+    "List a pay-link's event stream (views, payments, webhook fires…) with type filter + cursor. Read-only.",
+    linksX.getLinkEventsSchema,
+    { title: "Get Link Events", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    linksX.getLinkEvents,
+  );
+  registerAgentTool(
+    "xenarch_get_links_rollup",
+    "Merchant pay-link KPIs: paid 24h/total, month-to-date revenue, views, conversion. Read-only.",
+    linksX.getLinksRollupSchema,
+    { title: "Links Rollup", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    linksX.getLinksRollupTool,
+  );
+  registerAgentTool(
+    "xenarch_get_links_summary",
+    "Revenue / paid-count / link-count summary for a period (24h, 7d, 30d, all). Read-only.",
+    linksX.getLinksSummarySchema,
+    { title: "Links Summary", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    linksX.getLinksSummaryTool,
+  );
+  registerAgentTool(
+    "xenarch_list_groups",
+    "List pay-link groups (name, accent, members). Read-only.",
+    linksX.listGroupsSchema,
+    { title: "List Groups", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    linksX.listGroupsTool,
+  );
+  registerAgentTool(
+    "xenarch_create_group",
+    "Create a pay-link group. Requires confirm: true.",
+    linksX.createGroupSchema,
+    { title: "Create Group", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    linksX.createGroupTool,
+  );
+  registerAgentTool(
+    "xenarch_update_group",
+    "Rename / re-accent / re-position a pay-link group. Requires confirm: true.",
+    linksX.updateGroupSchema,
+    { title: "Update Group", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    linksX.updateGroupTool,
+  );
+  registerAgentTool(
+    "xenarch_delete_group",
+    "Delete a pay-link group (member links become ungrouped). Requires confirm: true.",
+    linksX.deleteGroupSchema,
+    { title: "Delete Group", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    linksX.deleteGroupTool,
+  );
+  registerAgentTool(
+    "xenarch_assign_link_group",
+    "Move a pay-link into a group (or null to ungroup). Requires confirm: true.",
+    linksX.assignLinkGroupSchema,
+    { title: "Assign Link Group", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    linksX.assignLinkGroupTool,
+  );
+  registerAgentTool(
+    "xenarch_list_orders",
+    "List paid orders across pay-links (buyer, shipping, status, tracking) with filters + cursor. Read-only.",
+    linksX.listOrdersSchema,
+    { title: "List Orders", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    linksX.listOrdersTool,
+  );
+  registerAgentTool(
+    "xenarch_ship_order",
+    "Mark an order shipped with a tracking number — emails the buyer. Requires confirm: true.",
+    linksX.shipOrderSchema,
+    { title: "Ship Order", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    linksX.shipOrderTool,
+  );
+  registerAgentTool(
+    "xenarch_export_orders",
+    "Export orders as CSV text (same filters as list). Read-only.",
+    linksX.exportOrdersSchema,
+    { title: "Export Orders CSV", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    linksX.exportOrdersTool,
+  );
+
+  // --- Pay-link webhooks (XEN-517) --------------------------------------------
+  registerAgentTool(
+    "xenarch_get_link_webhook",
+    "Read a pay-link's webhook config (URL, event types, enabled). Read-only.",
+    hooks.getLinkWebhookSchema,
+    { title: "Get Link Webhook", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    hooks.getLinkWebhookTool,
+  );
+  registerAgentTool(
+    "xenarch_set_link_webhook",
+    "Set a pay-link's webhook URL / event types / enabled. Requires confirm: true.",
+    hooks.setLinkWebhookSchema,
+    { title: "Set Link Webhook", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    hooks.setLinkWebhookTool,
+  );
+  registerAgentTool(
+    "xenarch_rotate_link_webhook_secret",
+    "Rotate a pay-link's webhook signing secret (old secret stops verifying). Requires confirm: true.",
+    hooks.rotateLinkWebhookSecretSchema,
+    { title: "Rotate Link Webhook Secret", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    hooks.rotateLinkWebhookSecretTool,
+  );
+  registerAgentTool(
+    "xenarch_test_link_webhook",
+    "Send a test event to a pay-link's webhook URL. Requires confirm: true.",
+    hooks.testLinkWebhookSchema,
+    { title: "Test Link Webhook", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    hooks.testLinkWebhookTool,
+  );
+  registerAgentTool(
+    "xenarch_get_link_webhook_deliveries",
+    "List a pay-link's recent webhook delivery attempts (status, latency, errors). Read-only.",
+    hooks.getLinkWebhookDeliveriesSchema,
+    { title: "Link Webhook Deliveries", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    hooks.getLinkWebhookDeliveriesTool,
+  );
+  registerAgentTool(
+    "xenarch_retry_link_webhook_delivery",
+    "Re-send one failed pay-link webhook delivery. Requires confirm: true.",
+    hooks.retryLinkWebhookDeliverySchema,
+    { title: "Retry Link Webhook Delivery", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    hooks.retryLinkWebhookDeliveryTool,
+  );
+
+  // --- Agent webhooks + remaining agent surface (XEN-517) ----------------------
+  registerAgentTool(
+    "xenarch_get_agent_webhook",
+    "Read the agent's webhook config (URL, event types, enabled). Read-only.",
+    hooks.getAgentWebhookSchema,
+    { title: "Get Agent Webhook", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    hooks.getAgentWebhookTool,
+  );
+  registerAgentTool(
+    "xenarch_set_agent_webhook",
+    "Set the agent's webhook URL / event types / enabled. Requires confirm: true.",
+    hooks.setAgentWebhookSchema,
+    { title: "Set Agent Webhook", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    hooks.setAgentWebhookTool,
+  );
+  registerAgentTool(
+    "xenarch_rotate_agent_webhook_secret",
+    "Rotate the agent webhook's signing secret. Requires confirm: true.",
+    hooks.rotateAgentWebhookSecretSchema,
+    { title: "Rotate Agent Webhook Secret", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    hooks.rotateAgentWebhookSecretTool,
+  );
+  registerAgentTool(
+    "xenarch_test_agent_webhook",
+    "Send a test event to the agent's webhook URL. Requires confirm: true.",
+    hooks.testAgentWebhookSchema,
+    { title: "Test Agent Webhook", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    hooks.testAgentWebhookTool,
+  );
+  registerAgentTool(
+    "xenarch_get_agent_webhook_deliveries",
+    "List the agent webhook's recent delivery attempts. Read-only.",
+    hooks.getAgentWebhookDeliveriesSchema,
+    { title: "Agent Webhook Deliveries", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    hooks.getAgentWebhookDeliveriesTool,
+  );
+  registerAgentTool(
+    "xenarch_retry_agent_webhook_delivery",
+    "Re-send one failed agent webhook delivery. Requires confirm: true.",
+    hooks.retryAgentWebhookDeliverySchema,
+    { title: "Retry Agent Webhook Delivery", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    hooks.retryAgentWebhookDeliveryTool,
+  );
+  registerAgentTool(
+    "xenarch_update_agent_profile",
+    "Update the agent's display profile (display_name, label; null clears). Requires confirm: true.",
+    agentX.updateAgentProfileSchema,
+    { title: "Update Agent Profile", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    agentX.updateAgentProfile,
+  );
+  registerAgentTool(
+    "xenarch_get_receipt",
+    "Get one payment receipt by id (from xenarch_agent_get_receipts). Read-only.",
+    agentX.getReceiptSchema,
+    { title: "Get Receipt", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    agentX.getReceipt,
+  );
+
+  // --- Sites & gating + bots (XEN-517) — publisher surface ---------------------
+  registerAgentTool(
+    "xenarch_list_sites",
+    "List the signed-in identity's sites (domain, price, gating, integration). Empty if the identity isn't a publisher yet. Read-only.",
+    sites.listSitesSchema,
+    { title: "List Sites", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    sites.listSitesTool,
+  );
+  registerAgentTool(
+    "xenarch_add_site",
+    "Create a site (issues its site token; domain optional — the integration backfills it). Needs a verified account email. Requires confirm: true.",
+    sites.addSiteSchema,
+    { title: "Add Site", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    sites.addSite,
+  );
+  registerAgentTool(
+    "xenarch_get_site",
+    "Full site detail: gating config, pricing rules, token hash, integration. Read-only.",
+    sites.getSiteSchema,
+    { title: "Get Site", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    sites.getSiteTool,
+  );
+  registerAgentTool(
+    "xenarch_delete_site",
+    "Permanently delete a site — its token stops working. Requires confirm: true.",
+    sites.deleteSiteSchema,
+    { title: "Delete Site", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    sites.deleteSiteTool,
+  );
+  registerAgentTool(
+    "xenarch_set_site_gating",
+    "Replace a site's gating config (master switch + category map, whole-state). Changes which bot traffic is charged/blocked. Requires confirm: true.",
+    sites.setSiteGatingSchema,
+    { title: "Set Site Gating", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    sites.setSiteGating,
+  );
+  registerAgentTool(
+    "xenarch_set_site_pricing",
+    "Replace a site's pricing (default price/scope + per-path rules, whole-state). Requires confirm: true.",
+    sites.setSitePricingSchema,
+    { title: "Set Site Pricing", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    sites.setSitePricing,
+  );
+  registerAgentTool(
+    "xenarch_rotate_site_token",
+    "Rotate a site's token — the integration must be updated or gating stops. Requires confirm: true.",
+    sites.rotateSiteTokenSchema,
+    { title: "Rotate Site Token", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    sites.rotateSiteTokenTool,
+  );
+  registerAgentTool(
+    "xenarch_get_site_stats",
+    "Site earnings stats: gates, paid count, revenue, top pages, top agents. Read-only.",
+    sites.getSiteStatsSchema,
+    { title: "Site Stats", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    sites.getSiteStatsTool,
+  );
+  registerAgentTool(
+    "xenarch_get_site_activity",
+    "Site transaction feed (paid / blocked / withdrawals) with period + status filters, paginated. Read-only.",
+    sites.getSiteActivitySchema,
+    { title: "Site Activity", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    sites.getSiteActivity,
+  );
+  registerAgentTool(
+    "xenarch_get_site_categories",
+    "Per-bot-category earnings breakdown for a site. Read-only.",
+    sites.getSiteCategoriesSchema,
+    { title: "Site Category Breakdown", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    sites.getSiteCategories,
+  );
+  registerAgentTool(
+    "xenarch_get_publisher_gating",
+    "Read the publisher-level gating defaults (category map + per-bot overrides). Read-only.",
+    sites.getPublisherGatingSchema,
+    { title: "Get Publisher Gating", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    sites.getPublisherGatingTool,
+  );
+  registerAgentTool(
+    "xenarch_set_publisher_gating",
+    "Replace the publisher-level gating defaults — affects every site set to follow them. Requires confirm: true.",
+    sites.setPublisherGatingSchema,
+    { title: "Set Publisher Gating", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    sites.setPublisherGatingTool,
+  );
+  registerAgentTool(
+    "xenarch_create_site_claim",
+    "Mint a short-lived claim token so a plugin/worker/SDK can bootstrap its site token without copy-paste. Requires confirm: true.",
+    sites.createSiteClaimSchema,
+    { title: "Create Site Claim", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    sites.createSiteClaimTool,
+  );
+  registerAgentTool(
+    "xenarch_bot_catalog",
+    "The full bot signature catalog (name, category, company). Public, no auth. Read-only.",
+    sites.botCatalogSchema,
+    { title: "Bot Catalog", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    sites.botCatalog,
+  );
+  registerAgentTool(
+    "xenarch_bot_activity",
+    "Aggregated cross-site bot activity for the publisher (hits, sites seen, last seen per signature). Read-only.",
+    sites.botActivitySchema,
+    { title: "Bot Activity", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    sites.botActivity,
+  );
+
+  // --- Account & identity + earnings (XEN-517) ----------------------------------
+  registerAgentTool(
+    "xenarch_list_wallets",
+    "List the account's linked wallets (owner/default flags, labels, eligibility). Read-only.",
+    account.listWalletsSchema,
+    { title: "List Wallets", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    account.listWalletsTool,
+  );
+  registerAgentTool(
+    "xenarch_link_wallet",
+    "Link the agent's LOCAL wallet to your account as a co-wallet (key-held SIWE — signs with the local key). Requires confirm: true.",
+    account.linkWalletSchema,
+    { title: "Link Wallet", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    account.linkWalletTool,
+  );
+  registerAgentTool(
+    "xenarch_unlink_wallet",
+    "Unlink a wallet from the account — it loses sign-in access. Requires confirm: true.",
+    account.unlinkWalletSchema,
+    { title: "Unlink Wallet", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    account.unlinkWalletTool,
+  );
+  registerAgentTool(
+    "xenarch_set_wallet_label",
+    "Set/clear a linked wallet's nickname. Requires confirm: true.",
+    account.setWalletLabelSchema,
+    { title: "Set Wallet Label", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    account.setWalletLabelTool,
+  );
+  registerAgentTool(
+    "xenarch_transfer_owner",
+    "Transfer account OWNERSHIP to another linked wallet. Hard to reverse. Requires confirm: true.",
+    account.transferOwnerSchema,
+    { title: "Transfer Ownership", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    account.transferOwnerTool,
+  );
+  registerAgentTool(
+    "xenarch_list_merchant_keys",
+    "List the merchant's xm_live_ API keys (never returns plaintext). Read-only.",
+    account.listMerchantKeysSchema,
+    { title: "List Merchant Keys", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    account.listMerchantKeysTool,
+  );
+  registerAgentTool(
+    "xenarch_create_merchant_key",
+    "Issue a new xm_live_ merchant API key (plaintext returned once). Requires confirm: true.",
+    account.createMerchantKeySchema,
+    { title: "Create Merchant Key", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    account.createMerchantKeyTool,
+  );
+  registerAgentTool(
+    "xenarch_rotate_merchant_key",
+    "Rotate a merchant API key — invalidates the old secret, returns a new one once. Requires confirm: true.",
+    account.rotateMerchantKeySchema,
+    { title: "Rotate Merchant Key", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    account.rotateMerchantKeyTool,
+  );
+  registerAgentTool(
+    "xenarch_revoke_merchant_key",
+    "Permanently revoke a merchant API key. Requires confirm: true.",
+    account.revokeMerchantKeySchema,
+    { title: "Revoke Merchant Key", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    account.revokeMerchantKeyTool,
+  );
+  registerAgentTool(
+    "xenarch_create_invite",
+    "Mint a co-owner join link (viewer / operator / full_co_owner). Anyone redeeming it joins your account. Requires confirm: true.",
+    account.createInviteSchema,
+    { title: "Create Invite", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    account.createInviteTool,
+  );
+  registerAgentTool(
+    "xenarch_list_invites",
+    "List outstanding (unredeemed) invites. Read-only.",
+    account.listInvitesSchema,
+    { title: "List Invites", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    account.listInvitesTool,
+  );
+  registerAgentTool(
+    "xenarch_revoke_invite",
+    "Revoke a live invite before it's redeemed. Requires confirm: true.",
+    account.revokeInviteSchema,
+    { title: "Revoke Invite", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    account.revokeInviteTool,
+  );
+  registerAgentTool(
+    "xenarch_preview_invite",
+    "Preview a join link: which account it joins, role, expiry. Anonymous. Read-only.",
+    account.previewInviteSchema,
+    { title: "Preview Invite", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    account.previewInviteTool,
+  );
+  registerAgentTool(
+    "xenarch_redeem_invite",
+    "Join another Xenarch account by invite token — the agent's LOCAL wallet signs SIWE and attaches to the inviter's identity. Requires confirm: true.",
+    account.redeemInviteSchema,
+    { title: "Redeem Invite", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    account.redeemInviteTool,
+  );
+  registerAgentTool(
+    "xenarch_set_account_email",
+    "Set the account email and send it a verification code (finish with xenarch_verify_account_email). Requires confirm: true.",
+    account.setAccountEmailSchema,
+    { title: "Set Account Email", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    account.setAccountEmail,
+  );
+  registerAgentTool(
+    "xenarch_verify_account_email",
+    "Verify the account email with the emailed code.",
+    account.verifyAccountEmailSchema,
+    { title: "Verify Account Email", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    account.verifyAccountEmail,
+  );
+  registerAgentTool(
+    "xenarch_upload_asset",
+    "Upload an image (URL or base64, max 5 MB) to Xenarch's public CDN — for logos/branding. Returns the cdn.xenarch.dev URL. Requires confirm: true.",
+    account.uploadAssetSchema,
+    { title: "Upload Asset", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    account.uploadAssetTool,
+  );
+  registerAgentTool(
+    "xenarch_get_earnings_summary",
+    "Earnings summary: today / this month / all-time (USD + payment counts). Read-only.",
+    account.getEarningsSummarySchema,
+    { title: "Earnings Summary", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    account.getEarningsSummaryTool,
+  );
+
   registerAgentTool(
     "xenarch_pay_link",
     "Pay a Xenarch pay-link by id (wrapped x402): fetches the link's payment envelope, settles EIP-3009 USDC on Base, and confirms the payment with the link. Use this for pay.xenarch.com/l/<id> links; use xenarch_pay for arbitrary x402-gated URLs. Pays from the agent wallet (USDC only, no gas needed).",

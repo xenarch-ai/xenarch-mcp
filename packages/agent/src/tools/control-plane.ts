@@ -187,10 +187,24 @@ export async function agentSetCaps(input: AgentSetCapsInput, config: XenarchConf
   return putAgentCaps(config.apiBase, token, next);
 }
 
-export const agentResetDayCapSchema = z.object({});
+export const agentResetDayCapSchema = z.object({
+  confirm: z
+    .boolean()
+    .default(false)
+    .describe("Required true: restores the agent's full daily spend headroom."),
+});
 export type AgentResetDayCapInput = z.infer<typeof agentResetDayCapSchema>;
-export async function agentResetDayCap(_input: AgentResetDayCapInput, config: XenarchConfig) {
-  return resetAgentDayCap(config.apiBase, requireSession(config));
+export async function agentResetDayCap(input: AgentResetDayCapInput, config: XenarchConfig) {
+  const token = requireSession(config);
+  // Loosening: an agent that exhausted its daily cap must not be able to
+  // silently self-reset and keep spending (XEN-517 review finding).
+  if (!input.confirm) {
+    return needsConfirmation(
+      "reset_day_cap",
+      "This resets today's spend counter back to the FULL daily cap — the agent regains its entire daily headroom immediately.",
+    );
+  }
+  return resetAgentDayCap(config.apiBase, token);
 }
 
 // --- scope ----------------------------------------------------------------
