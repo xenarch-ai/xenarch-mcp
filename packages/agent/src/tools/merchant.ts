@@ -284,7 +284,22 @@ export async function xenarchListSubscribers(input: XenarchListSubscribersInput,
   if (input.mode) qs.set("mode", input.mode);
   if (input.limit) qs.set("limit", String(input.limit));
   if (input.starting_after) qs.set("starting_after", input.starting_after);
-  return listSubscribers(config.apiBase, token, qs.toString());
+  const res = await listSubscribers(config.apiBase, token, qs.toString());
+  // XEN-611: raw dunning fields (collectable / collectable_reason /
+  // collection_fail_count) pass through; add the dashboard's derived label so
+  // agents render collection health without re-deriving the n/5 convention.
+  return {
+    ...res,
+    subscribers: res.subscribers.map((s) => ({
+      ...s,
+      dunning_label:
+        s.status === "suspended"
+          ? "Suspended"
+          : (s.collection_fail_count ?? 0) > 0
+            ? `dunning (${s.collection_fail_count}/5)`
+            : null,
+    })),
+  };
 }
 
 // --- merchant profile ------------------------------------------------------
@@ -306,6 +321,10 @@ export const xenarchUpdateMerchantProfileSchema = z.object({
   brand_color: z.string().optional().describe("Accent color, e.g. #5a9fd4"),
   issuer_logo_url: z.string().optional().describe("HTTPS logo URL (must match your domain)"),
   collection_rhythm: z.enum(["daily", "weekly", "monthly", "never"]).optional(),
+  confirm: z
+    .boolean()
+    .default(false)
+    .describe("Required true: rewrites customer-facing merchant identity fields."),
 });
 export type XenarchUpdateMerchantProfileInput = z.infer<typeof xenarchUpdateMerchantProfileSchema>;
 
@@ -325,12 +344,26 @@ function writableFields(p: MerchantProfileResponse | null): MerchantProfileBody 
 
 export async function xenarchUpdateMerchantProfile(input: XenarchUpdateMerchantProfileInput, config: XenarchConfig) {
   const token = requireSession(config);
+  const changed = Object.keys(input).filter(
+    (k) => k !== "confirm" && input[k as keyof XenarchUpdateMerchantProfileInput] !== undefined,
+  );
+  if (changed.length === 0) {
+    throw new Error("Nothing to update: pass at least one profile field.");
+  }
+  if (!input.confirm) {
+    return needsConfirmation(
+      "update_merchant_profile",
+      `This rewrites the merchant profile fields buyers see on invoices and pay pages: ${changed.join(", ")}.` +
+        (changed.includes("merchant_site")
+          ? " Changing merchant_site invalidates the current domain verification."
+          : ""),
+    );
+  }
   // PUT is a whole-state upsert; merge provided fields over current.
   const current = await getMerchantProfile(config.apiBase, token);
   const body = writableFields(current);
-  for (const k of Object.keys(input) as (keyof XenarchUpdateMerchantProfileInput)[]) {
-    const v = input[k];
-    if (v !== undefined) (body as Record<string, unknown>)[k] = v;
+  for (const k of changed as (keyof MerchantProfileBody)[]) {
+    (body as Record<string, unknown>)[k] = input[k as keyof XenarchUpdateMerchantProfileInput];
   }
   return putMerchantProfile(config.apiBase, token, body);
 }

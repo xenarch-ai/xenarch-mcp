@@ -1,12 +1,15 @@
 {
   "name": "@xenarch/core",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Shared TypeScript types and x402 payment-flow utilities for @xenarch/agent-mcp — Xenarch's non-custodial x402 MCP server.",
   "homepage": "https://xenarch.com",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist"
@@ -18,7 +21,28 @@
   "devDependencies": {
     "typescript": "^5.5.0"
   },
-  "keywords": ["mcp", "mcp-server", "model-context-protocol", "x402", "http-402", "ai-agent-payments", "claude", "cursor", "langchain", "crewai", "usdc", "base", "base-l2", "non-custodial", "pay-per-crawl", "cloudflare-alternative", "tollbit-alternative", "machine-to-machine-payments", "pay-json", "xenarch"],
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "x402",
+    "http-402",
+    "ai-agent-payments",
+    "claude",
+    "cursor",
+    "langchain",
+    "crewai",
+    "usdc",
+    "base",
+    "base-l2",
+    "non-custodial",
+    "pay-per-crawl",
+    "cloudflare-alternative",
+    "tollbit-alternative",
+    "machine-to-machine-payments",
+    "pay-json",
+    "xenarch"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
