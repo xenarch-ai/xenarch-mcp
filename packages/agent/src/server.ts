@@ -21,7 +21,7 @@ import * as account from "./tools/account.js";
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "xenarch",
-    version: "1.3.0",
+    version: "1.3.1",
   });
 
   server.resource(

@@ -57,9 +57,23 @@ MIT
 
 ## Tools exposed
 
+100+ tools (v1.3, ~100% Xenarch dashboard parity). The paying core:
+
 - `xenarch_check_gate` — Check if a URL or domain has an x402 payment gate. Returns price, accepted payment requirements, seller wallet, network, asset.
 - `xenarch_pay` — Pay an x402-gated URL with USDC on Base, signed via EIP-3009 transferWithAuthorization, settles on-chain. Returns the on-chain tx hash and the gated content.
-- `xenarch_get_history` — List past payments by this wallet.
+- `xenarch_pay_link` — Pay a Xenarch pay-link (wrapped x402).
+- `xenarch_wallet_status` / `xenarch_get_history` — wallet address + balance; past payments.
+
+Plus the full management surface (sign in once via the `xenarch_agent_login` browser device flow):
+
+- **Agent control plane** — spend caps, scope rules, pause/resume kill switch, API keys, receipts, webhooks.
+- **Merchant pay-links** — create (EIP-712 signed), list/revoke, metadata, events, revenue rollups, groups, orders + shipping, per-link webhooks.
+- **Subscribers** — lifecycle, dunning state, metered charge ledger, MRR/churn, manage-links, period caps.
+- **On-chain collection** — submit buyer permits and pull due subscription payments (`USDC.permit`/`transferFrom`) from the seller's own wallet.
+- **Publisher sites & bots** — sites CRUD, gating + pricing, site tokens, stats, bot catalog + activity.
+- **Account** — linked wallets, merchant API keys, co-owner invites, email, asset upload, earnings.
+
+Every mutating tool is confirmation-gated (`needs_confirmation` preview → re-invoke with `confirm: true`); money-moving tools additionally pin the exact amount.
 
 ## Environment variables
 
@@ -68,6 +82,8 @@ MIT
 - `XENARCH_API_BASE` — Xenarch platform API (default `https://xenarch.dev`)
 - `XENARCH_NETWORK` — `base` or `base-sepolia` (default `base`)
 - `XENARCH_MAX_PAYMENT_USD` — max USD per call to auto-approve without prompting
+- `XENARCH_API_TOKEN` — `xa_live_*` control-plane token (required for `xenarch_pay`; fail-closed without it)
+- `XENARCH_SESSION_TOKEN` — SIWE session for management tools (usually set via `xenarch_agent_login` instead)
 
 ## Maintainers
 
