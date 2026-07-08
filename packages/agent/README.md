@@ -65,7 +65,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) o
 }
 ```
 
-Restart Claude Desktop. The `xenarch_check_gate`, `xenarch_pay`, and `xenarch_get_history` tools become available to the model.
+Restart Claude Desktop. Xenarch's 100+ tools become available to the model — paying x402 gates, plus the full merchant, subscriber, and publisher control surface (see "Tools the model sees" below).
 
 ### Cursor
 
@@ -100,14 +100,31 @@ Open the Cline panel → MCP Servers → Add. Same JSON. Cline reloads servers o
 | `XENARCH_NETWORK` | `base` | Network (`base` or `base-sepolia`) |
 | `XENARCH_MAX_PAYMENT_USD` | — | Max USD per call to auto-approve without prompting |
 | `XENARCH_API_TOKEN` | — | **Required** `xa_live_*` token from https://dash.xenarch.dev/agent/settings. Every `xenarch_pay` call **preflights** with the platform (caps + scope + kill switch), reports the receipt back, and on settle failure POSTs a `status='failed'` receipt with the auth_token so the platform refunds the cap charge. **Without it, `xenarch_pay` refuses to pay (fail-closed)** — an unlinked agent has no caps, so it must not settle uncapped. |
+| `XENARCH_SESSION_TOKEN` | — | SIWE session for the management tools (control plane, merchant, subscribers, sites, account). Usually not set by hand — sign in with the `xenarch_agent_login` tool (browser device flow) or the CLI's `xenarch agent login`; both persist the session to `~/.xenarch/config.json`. |
 
 ## Tools the model sees
+
+**Paying (the core, works standalone):**
 
 | Tool | What it does |
 |---|---|
 | `xenarch_check_gate` | Probe a URL for an x402 challenge without paying. Returns price + seller + settlement providers. |
 | `xenarch_pay` | Pay an x402-gated URL with USDC on Base L2 and return the gated content. Signs EIP-3009 `transferWithAuthorization`, settles via the publisher's chosen settlement provider, replays with the canonical Xenarch headers. |
-| `xenarch_get_history` | List past USDC micropayments from this wallet through Xenarch. Filter by domain. |
+| `xenarch_pay_link` | Pay a Xenarch pay-link (`pay.xenarch.com/l/<id>`) — the wrapped x402 flow. |
+| `xenarch_wallet_status` / `xenarch_get_history` | Wallet address + USDC balance; past payments (filter by domain). |
+
+**Managing (v1.3 — ~100% dashboard parity; sign in once with `xenarch_agent_login`):**
+
+| Group | Tools |
+|---|---|
+| Agent control plane | status, spend caps get/set/reset, scope rules, pause/resume kill switch, `xa_live_` API keys, receipts, agent webhooks, profile |
+| Merchant pay-links | create (validate-first + EIP-712 signing), list/get/revoke, metadata, events, revenue rollups, groups, orders + shipping + CSV export, per-link webhooks |
+| Subscribers | list (with dunning state), detail, metered charge ledger, MRR/churn rollup, cancel/suspend, manage-links, period caps, collectable bags, digest |
+| On-chain collection | `xenarch_permit_submit`, `xenarch_permit_collect`, `xenarch_metered_collect`, `xenarch_record_collect` — pull due subscription payments via `USDC.permit`/`transferFrom`. Needs the seller wallet's **local key** + a little Base ETH for gas (the one flow that isn't gasless — the merchant broadcasts their own pull). |
+| Publisher sites & bots | sites CRUD, gating + pricing rules, site tokens, stats/activity/category breakdowns, publisher-wide gating, bot catalog + activity |
+| Account | linked wallets (link/unlink/label/transfer-owner), merchant API keys, co-owner invites, account email, logo upload, earnings summary |
+
+Every mutating tool is gated: it returns a `needs_confirmation` preview first and only acts when re-invoked with `confirm: true` — money-moving tools additionally pin the exact amount. Tool descriptions carry the details.
 
 ## What refusals look like
 
