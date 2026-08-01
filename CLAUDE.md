@@ -33,6 +33,14 @@ These are thin API clients to the xenarch.dev backend. No business logic lives h
 
 See root `../CLAUDE.md` for branching, PR, and commit conventions.
 
+## First Run Check
+
+On first interaction with a contributor, verify git hooks are set up by checking `git config core.hooksPath`. If it doesn't return `.githooks`, tell the contributor:
+
+> "This project requires git hooks for commit message enforcement. Can I run `git config core.hooksPath .githooks` to enable them?"
+
+Do not proceed with any code changes until hooks are confirmed active.
+
 ## Architecture
 
 See `../Information/design/mcp-servers.md` for MCP server design.
