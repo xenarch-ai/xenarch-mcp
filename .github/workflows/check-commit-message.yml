@@ -1,0 +1,23 @@
+name: Check commit message
+# Installed by `retasc gate install`. The authoritative commit↔issue gate:
+# runs in CI on every PR, no per-developer setup, can't be bypassed.
+on:
+  pull_request:
+    types: [opened, synchronize, edited]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for XEN issue reference
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if printf '%s %s' "$PR_TITLE" "$PR_BODY" | grep -qiE '(XEN-[0-9]+|\[no-issue\])'; then
+            echo "✓ XEN issue reference found"
+            exit 0
+          fi
+
+          echo "ERROR: PR must reference a XEN issue (XEN-NN) in title or description, or include [no-issue]."
+          exit 1

@@ -1,0 +1,23 @@
+#!/bin/bash
+# Require a XEN issue reference (XEN-NN) or [no-issue] in commit messages.
+# Installed by `retasc gate install`. Enable with: git config core.hooksPath .githooks
+# Note: git does not run hooks on a fresh clone — each developer opts in once.
+# The authoritative gate is the check-commit-message GitHub Action (CI).
+
+MSG=$(git stripspace --strip-comments < "$1")
+
+if echo "$MSG" | grep -qiE '(XEN-[0-9]+|\[no-issue\])'; then
+  exit 0
+fi
+
+echo ""
+echo "ERROR: Commit message must reference a XEN issue (XEN-NN) or include [no-issue]."
+echo ""
+echo "Examples:"
+echo '  feat: add wave dispatch'
+echo ''
+echo '  XEN-12'
+echo ''
+echo '  docs: fix typo in README [no-issue]'
+echo ""
+exit 1
