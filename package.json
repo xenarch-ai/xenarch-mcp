@@ -7,7 +7,9 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces",
-    "clean": "rm -rf packages/*/dist"
+    "clean": "rm -rf packages/*/dist",
+    "test": "npm run test --workspace packages/shared",
+    "typecheck": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/agent/tsconfig.json"
   },
   "engines": {
     "node": ">=18"
