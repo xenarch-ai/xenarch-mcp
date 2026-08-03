@@ -1,6 +1,12 @@
 import { privateKeyToAccount } from "viem/accounts";
 import { parseUnits, type Hex } from "viem";
 import type { GateResponse, PaymentResult, XenarchConfig } from "./types.js";
+import {
+  isCasperNetwork,
+  selectCasperAccept,
+  CasperConfigurationError,
+  type CasperNetwork,
+} from "./casper.js";
 
 // USDC on Base mainnet (XEN-385 — manual settle, dropped x402-fetch
 // because the WP plugin replays expect Xenarch-specific headers
@@ -119,6 +125,36 @@ function selectAccept(
   return accepts[0] ?? null;
 }
 
+/**
+ * Guard the EIP-3009 signing path (XEN-500).
+ *
+ * `selectAccept` falls back to "any exact-scheme entry" when the gate's own
+ * network has no match. Once gates start advertising Casper alongside Base,
+ * that fallback could hand a `casper:*` entry to the USDC/Base signer, which
+ * would produce a signature over the wrong domain — accepted by nothing, and
+ * confusing to debug. Fail fast with a typed error instead.
+ *
+ * This is inert for gates that advertise no Casper `accepts` entry, i.e. every
+ * gate in production today.
+ */
+function assertNotCasperAccept(accept: AcceptEntry): void {
+  if (!isCasperNetwork(accept.network)) return;
+  throw new CasperConfigurationError(
+    `This gate settles on ${accept.network as CasperNetwork}, which the EIP-3009 ` +
+      `signer cannot sign. Settle it through the Casper facilitator ` +
+      `(CasperFacilitatorClient) instead.`,
+  );
+}
+
+/**
+ * True iff the gate advertises a Casper `accepts` entry. Callers use this to
+ * route to the Casper seam; it is false for every Base-only gate, so existing
+ * deployments keep the exact behaviour they had before.
+ */
+export function gateNeedsCasperSettlement(gate: GateResponse): boolean {
+  return selectCasperAccept(gate.accepts) !== null;
+}
+
 function randomHex32(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
@@ -204,6 +240,7 @@ export async function settleX402(
       "Pay-link has no compatible payment scheme in `accepts` (need scheme=exact + payTo + maxAmountRequired).",
     );
   }
+  assertNotCasperAccept(accept);
 
   const amount = BigInt(accept.maxAmountRequired);
   enforceLocalCap(amount, config);
@@ -292,6 +329,7 @@ export async function payAndFetch(
       "Gate has no compatible payment scheme in `accepts` (need scheme=exact + payTo + maxAmountRequired).",
     );
   }
+  assertNotCasperAccept(accept);
 
   // The gate's `maxAmountRequired` is already in base units (e.g.
   // "3000" = $0.003 USDC at 6 decimals). The local per-call cap is the

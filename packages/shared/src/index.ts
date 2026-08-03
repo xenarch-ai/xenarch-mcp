@@ -1,5 +1,35 @@
 export { payAndFetch, settleX402 } from "./payment.js";
 export {
+  CASPER_MAINNET,
+  CASPER_TESTNET,
+  CASPER_NETWORKS,
+  CSPR_DECIMALS,
+  DEFAULT_CASPER_FACILITATOR_URL,
+  isCasperNetwork,
+  casperFacilitatorUrl,
+  csprToMotes,
+  motesToCspr,
+  parseMoteAmount,
+  casperNonce,
+  buildCasperPaymentPayload,
+  selectCasperAccept,
+  gateSupportsCasper,
+  CasperFacilitatorClient,
+  CasperError,
+  CasperAmountPrecisionError,
+  CasperConfigurationError,
+  CasperFacilitatorError,
+} from "./casper.js";
+export type {
+  CasperNetwork,
+  CasperAuthorization,
+  CasperPaymentPayload,
+  BuildCasperPayloadArgs,
+  CasperVerifyResult,
+  CasperSettleResult,
+  CasperFacilitatorClientOptions,
+} from "./casper.js";
+export {
   fetchGate,
   fetchGateByDomain,
   verifyPayment,

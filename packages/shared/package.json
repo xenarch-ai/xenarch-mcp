@@ -1,7 +1,7 @@
 {
   "name": "@xenarch/core",
   "version": "1.2.0",
-  "description": "Shared TypeScript types and x402 payment-flow utilities for @xenarch/agent-mcp — Xenarch's non-custodial x402 MCP server.",
+  "description": "Shared TypeScript types and x402 payment-flow utilities for @xenarch/agent-mcp \u2014 Xenarch's non-custodial x402 MCP server.",
   "homepage": "https://xenarch.com",
   "type": "module",
   "main": "dist/index.js",
@@ -12,7 +12,8 @@
   ],
   "scripts": {
     "build": "tsc",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "npm run build && node --test \"test/**/*.test.mjs\""
   },
   "dependencies": {
     "viem": "^2.21.26",
