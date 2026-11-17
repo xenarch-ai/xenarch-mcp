@@ -78,7 +78,9 @@ export interface XenarchConfig {
 
 export const DEFAULT_CONFIG: Omit<XenarchConfig, "privateKey"> = {
   rpcUrl: "https://mainnet.base.org",
-  apiBase: "https://xenarch.dev",
+  // The API host. The bare xenarch.dev host 301-redirects every request to the
+  // xenarch.com homepage, so it can never serve an API call.
+  apiBase: "https://api.xenarch.dev",
   network: "base",
   // Default per-call payment ceiling for standalone (no-token) use. The $1
   // figure is positioning, not protocol — payment amounts are otherwise

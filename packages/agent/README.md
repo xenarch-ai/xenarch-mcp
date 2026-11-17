@@ -96,7 +96,7 @@ Open the Cline panel → MCP Servers → Add. Same JSON. Cline reloads servers o
 |----------|---------|-------------|
 | `XENARCH_PRIVATE_KEY` | — | Wallet private key (overrides config file) |
 | `XENARCH_RPC_URL` | `https://mainnet.base.org` | Base RPC endpoint |
-| `XENARCH_API_BASE` | `https://xenarch.dev` | Xenarch platform API |
+| `XENARCH_API_BASE` | `https://api.xenarch.dev` | Xenarch platform API |
 | `XENARCH_NETWORK` | `base` | Network (`base` or `base-sepolia`) |
 | `XENARCH_MAX_PAYMENT_USD` | — | Max USD per call to auto-approve without prompting |
 | `XENARCH_API_TOKEN` | — | **Required** `xa_live_*` token from https://dash.xenarch.dev/agent/settings. Every `xenarch_pay` call **preflights** with the platform (caps + scope + kill switch), reports the receipt back, and on settle failure POSTs a `status='failed'` receipt with the auth_token so the platform refunds the cap charge. **Without it, `xenarch_pay` refuses to pay (fail-closed)** — an unlinked agent has no caps, so it must not settle uncapped. |

@@ -106,6 +106,14 @@ export async function loadConfig(): Promise<LoadConfigResult> {
     walletCreated = { address };
   }
 
+  // Older CLI versions and the old README pointed api_base / XENARCH_API_BASE
+  // at the bare xenarch.dev host, which 301-redirects every API call to the
+  // xenarch.com homepage. Nothing on that host can answer, so read it as the
+  // API host instead of failing every gate check and payment.
+  if (config.apiBase) {
+    config.apiBase = normalizeApiBase(config.apiBase);
+  }
+
   return {
     config: {
       ...DEFAULT_CONFIG,
@@ -114,6 +122,20 @@ export async function loadConfig(): Promise<LoadConfigResult> {
     } as XenarchConfig,
     walletCreated,
   };
+}
+
+/** Map the retired bare host (https://xenarch.dev) to the API host. */
+export function normalizeApiBase(apiBase: string): string {
+  try {
+    const url = new URL(apiBase);
+    if (url.hostname === "xenarch.dev") {
+      url.hostname = "api.xenarch.dev";
+      return url.toString().replace(/\/$/, "");
+    }
+  } catch {
+    // Not a URL: leave it for the request to fail with the real value.
+  }
+  return apiBase;
 }
 
 /**

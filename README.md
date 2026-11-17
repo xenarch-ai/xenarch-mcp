@@ -233,7 +233,7 @@ Or add the same JSON to any MCP client's config file:
 | `XENARCH_PRIVATE_KEY` | — | Wallet private key (overrides config file) |
 | `XENARCH_API_TOKEN` | — | **Required.** Agent `xa_live_` key. Enforces `xenarch_pay` against your caps/scope and feeds the dashboard receipts. Without it, `xenarch_pay` refuses to pay (fail-closed). |
 | `XENARCH_RPC_URL` | `https://mainnet.base.org` | Base RPC endpoint |
-| `XENARCH_API_BASE` | `https://xenarch.dev` | Xenarch platform API |
+| `XENARCH_API_BASE` | `https://api.xenarch.dev` | Xenarch platform API |
 | `XENARCH_NETWORK` | `base` | Network (`base` or `base-sepolia`) |
 | `XENARCH_MAX_PAYMENT_USD` | `1.00` | Local per-call payment cap (USDC). The only spending ceiling in standalone mode — `xenarch_pay` refuses any single payment above it. Set `0` to remove the cap. For managed per-tx / daily / monthly caps, connect `XENARCH_API_TOKEN`. |
 
