@@ -79,7 +79,7 @@ Every mutating tool is confirmation-gated (`needs_confirmation` preview → re-i
 
 - `XENARCH_PRIVATE_KEY` — wallet private key (optional; auto-generates on first run)
 - `XENARCH_RPC_URL` — Base RPC endpoint (default `https://mainnet.base.org`)
-- `XENARCH_API_BASE` — Xenarch platform API (default `https://xenarch.dev`)
+- `XENARCH_API_BASE` — Xenarch platform API (default `https://api.xenarch.dev`)
 - `XENARCH_NETWORK` — `base` or `base-sepolia` (default `base`)
 - `XENARCH_MAX_PAYMENT_USD` — max USD per call to auto-approve without prompting
 - `XENARCH_API_TOKEN` — `xa_live_*` control-plane token (required for `xenarch_pay`; fail-closed without it)
