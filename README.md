@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/@xenarch/agent-mcp)](https://www.npmjs.com/package/@xenarch/agent-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Xenarch is a non-custodial x402 MCP server. AI agents — Claude, Cursor, LangChain, CrewAI — pay for HTTP 402—gated APIs and content with USDC micropayments on Base L2. No API keys, no subscriptions, no credit card on file. The agent wallet never needs ETH; USDC is the only token it ever holds. Payments settle on-chain: agent wallet → publisher wallet, direct. 0% Xenarch fee — there's no Xenarch contract in the money flow.
+Xenarch is a non-custodial x402 MCP server. AI agents — Claude, Cursor, LangChain, CrewAI — pay for HTTP 402—gated APIs and content with USDC micropayments on Base L2. No API keys, no subscriptions, no credit card on file. The agent wallet never needs ETH; USDC is the only token it ever holds. Payments settle on-chain: agent wallet → publisher wallet, direct. The publisher pays Xenarch 1% of each payment.
 
 ## What makes Xenarch different
 
@@ -12,7 +12,7 @@ Xenarch is a non-custodial x402 MCP server. AI agents — Claude, Cursor, LangCh
 | Works on any host | × (Cloudflare only) | ✓ | × (enterprise) | Vercel-first | ✓ | ✓ |
 | Non-custodial | × | × | × | platform-routed | varies | ✓ direct USDC transfer |
 | Agent needs ETH | n/a | n/a | n/a | varies | varies | ✓ never |
-| Fee | platform rate | 2.9% + $0.30 | platform rate | platform rate | varies | **0%, structurally** |
+| Fee | platform rate | 2.9% + $0.30 | platform rate | platform rate | varies | **Publisher pays 1% per payment.** |
 | Open standard | proprietary | proprietary | proprietary | x402 | x402 | x402 + pay.json (authored by Xenarch) |
 | Publisher monetization | ✓ (Cloudflare-gated) | ✓ (any stack) | ✓ (enterprise only) | × | × | ✓ (any stack) |
 
@@ -277,7 +277,7 @@ No. Payments settle on-chain as a direct USDC transfer from the agent wallet to 
 No. USDC is the only token the agent wallet ever needs. Fund it with USDC and you're done — no ETH, no other gas coin.
 
 **What's the fee?**
-0%, structurally. Xenarch never sits in the money flow — there's no Xenarch contract that could charge a fee.
+Xenarch charges the publisher 1% of each payment. The agent pays the gate's price and nothing else.
 
 **What's the maximum payment per call?**
 $1 USD.

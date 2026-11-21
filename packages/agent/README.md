@@ -9,7 +9,7 @@ Xenarch is a non-custodial x402 MCP server that gives any AI agent a wallet and 
 | Works on any host | × (Cloudflare only) | ✓ | × (enterprise) | ✓ |
 | Non-custodial | × | × | × | ✓ (agent-to-publisher direct, no Xenarch contract) |
 | Agent needs ETH | n/a | n/a | n/a | ✓ never |
-| Fee | Platform rate | 2.9% + $0.30 | Platform rate | **0% — no Xenarch contract that *can* charge a fee** |
+| Fee | Platform rate | 2.9% + $0.30 | Platform rate | **1% per payment, paid by the publisher.** |
 | Open standard | proprietary | proprietary | proprietary | x402 + pay.json (open) |
 
 ## Native in
@@ -28,7 +28,7 @@ pay.json is the open standard for machine-readable pricing, served at `/.well-kn
 
 **Does the agent need ETH for gas?** No. USDC is the only token the agent wallet ever needs. Fund it with USDC and you're done.
 
-**What's the fee?** 0%. There is no Xenarch contract that *can* charge a fee — the architecture is structurally zero-fee, not a policy promise.
+**What's the fee?** The publisher pays Xenarch 1% of each payment. The agent pays the gate's price.
 
 **What's the max payment?** $1 per call.
 

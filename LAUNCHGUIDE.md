@@ -12,11 +12,11 @@ Non-custodial x402 MCP server for AI agent payments
 
 ## Short description
 
-x402 MCP server that lets AI agents pay for HTTP 402–gated content and APIs with USDC micropayments on Base L2. Non-custodial. 0% fee. Works with Claude, Cursor, LangChain, and CrewAI.
+x402 MCP server that lets AI agents pay for HTTP 402–gated content and APIs with USDC micropayments on Base L2. Publishers pay Xenarch 1% per payment. Works with Claude, Cursor, LangChain, and CrewAI.
 
 ## Full description
 
-Xenarch is a non-custodial x402 MCP server. It lets AI agents — Claude, Cursor, LangChain, CrewAI, or any MCP client — resolve HTTP 402 ("Payment Required") responses automatically by signing USDC micropayments on Base L2 (up to $1 per call). The agent wallet only ever holds USDC — no ETH, no gas coin. Publishers get paid directly on-chain: agent wallet → publisher wallet, direct. 0% Xenarch fee — there's no Xenarch contract in the money flow. Unlike Cloudflare Pay-Per-Crawl, Xenarch works on any host and is fully non-custodial. HTTP 402 has been reserved in the HTTP spec since 1997 — x402 is the open protocol that finally uses it.
+Xenarch is a non-custodial x402 MCP server. It lets AI agents — Claude, Cursor, LangChain, CrewAI, or any MCP client — resolve HTTP 402 ("Payment Required") responses automatically by signing USDC micropayments on Base L2 (up to $1 per call). The agent wallet only ever holds USDC — no ETH, no gas coin. Publishers get paid directly on-chain: agent wallet → publisher wallet, direct. The publisher pays Xenarch 1% of each payment. Unlike Cloudflare Pay-Per-Crawl, Xenarch works on any host and is fully non-custodial. HTTP 402 has been reserved in the HTTP spec since 1997 — x402 is the open protocol that finally uses it.
 
 Docs & install: https://xenarch.com
 
