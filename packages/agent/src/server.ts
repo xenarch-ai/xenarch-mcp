@@ -38,7 +38,7 @@ export function createServer(): McpServer {
           text: JSON.stringify(
             {
               description:
-                "Non-custodial x402 MCP server. AI agents pay HTTP 402–gated APIs with USDC on Base L2, settled agent-to-publisher direct on-chain. 0% Xenarch fee — no Xenarch contract in the money flow. The agent wallet only ever holds USDC; no ETH or other gas coin needed. A local per-call cap (default $1, set XENARCH_MAX_PAYMENT_USD to change; 0 disables) guards standalone use; connect XENARCH_API_TOKEN for managed per-tx/daily/monthly caps.",
+                "Non-custodial x402 MCP server. AI agents pay HTTP 402–gated APIs with USDC on Base L2, settled agent-to-publisher direct on-chain. The publisher pays Xenarch 1% of each payment. The agent wallet only ever holds USDC; no ETH or other gas coin needed. A local per-call cap (default $1, set XENARCH_MAX_PAYMENT_USD to change; 0 disables) guards standalone use; connect XENARCH_API_TOKEN for managed per-tx/daily/monthly caps.",
               supported_networks: ["base", "base-sepolia"],
               supported_assets: ["USDC"],
               protocol: "x402",
