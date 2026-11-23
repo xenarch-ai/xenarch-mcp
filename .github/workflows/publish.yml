@@ -38,12 +38,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
 
       # Trusted Publishing needs npm >= 11.5.1; setup-node ships an older npm.
       - name: Upgrade npm (OIDC support)
-        run: npm install -g npm@latest
+        # npm 12 needs node >=22.22.2; npm 11 (>=11.5.1) has OIDC trusted publishing and runs on node 22 (XEN-691).
+        run: npm install -g npm@11
 
       # Untrusted inputs go through env vars, never inline in the shell.
       - name: Resolve package
