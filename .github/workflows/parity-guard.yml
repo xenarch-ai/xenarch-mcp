@@ -1,0 +1,27 @@
+name: Parity guard
+
+# XEN-716: fail a change that adds a hard-coded basescan.org link, the words
+# "USDC on Base", the Base USDC address or a USDC_ADDRESS-style constant
+# outside the Base-only-by-design allowlist (.github/parity-guard/).
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  parity-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: No new hard-coded Base / USDC on Base
+        env:
+          PARITY_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: python3 .github/parity-guard/check.py
