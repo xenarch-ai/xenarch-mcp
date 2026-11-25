@@ -1,2 +1,0 @@
-Deliberate parity-guard failure test (XEN-716), reverted in the next commit.
-https://basescan.org/tx/0xparityguardselftest
