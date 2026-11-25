@@ -22,7 +22,7 @@ import * as account from "./tools/account.js";
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "xenarch",
-    version: "1.3.3",
+    version: "1.4.0",
   });
 
   server.resource(
