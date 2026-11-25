@@ -66,6 +66,15 @@ const BUNDLED_SCHEMA: PayLinkSchemaResponse = {
   version: "bundled-fallback",
   currency: { default: "USDC", supported: ["USDC"] },
   network: { default: "base", supported: ["base"] },
+  // XEN-708: signed params settle in USDC on Base; other networks are an
+  // unsigned per-link opt-in (xenarch_set_link_networks).
+  accepted_networks: {
+    signed: false,
+    set_with: "PUT /v1/links/{link_id}/networks",
+    registry: "GET /v1/networks",
+    available: ["base", "ethereum", "bnb", "monad", "tron"],
+    note: "Signed params settle in USDC on Base. The owner can also accept USDC/USDT on other networks per link; buyers then pick the coin and network on the hosted page.",
+  },
   max_amount_usd: "1.00",
   fields: [
     { field: "to", group: "A", type: "address", required: true, state: "lit", prompt: "Recipient wallet", advanced: false, enum: null, default: null, auto_fill: "wallet", help: null },
