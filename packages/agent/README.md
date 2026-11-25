@@ -119,6 +119,7 @@ Open the Cline panel → MCP Servers → Add. Same JSON. Cline reloads servers o
 |---|---|
 | Agent control plane | status, spend caps get/set/reset, scope rules, pause/resume kill switch, `xa_live_` API keys, receipts, agent webhooks, profile |
 | Merchant pay-links | create (validate-first + EIP-712 signing), list/get/revoke, metadata, events, revenue rollups, groups, orders + shipping + CSV export, per-link webhooks |
+| Networks and coins | `xenarch_list_networks` (registry), `xenarch_get_link_networks` / `xenarch_set_link_networks` (a link's USDC/USDT on Ethereum, BNB Chain, Monad and Tron beyond Base USDC), `xenarch_scan_wallet` (a wallet's balances on a link's networks). Payments and orders report the coin, network and explorer link. Agent x402 payments stay USDC on Base. |
 | Subscribers | list (with dunning state), detail, metered charge ledger, MRR/churn rollup, cancel/suspend, manage-links, period caps, collectable bags, digest |
 | On-chain collection | `xenarch_permit_submit`, `xenarch_permit_collect`, `xenarch_metered_collect`, `xenarch_record_collect` — pull due subscription payments via `USDC.permit`/`transferFrom`. Needs the seller wallet's **local key** + a little Base ETH for gas (the one flow that isn't gasless — the merchant broadcasts their own pull). |
 | Publisher sites & bots | sites CRUD, gating + pricing rules, site tokens, stats/activity/category breakdowns, publisher-wide gating, bot catalog + activity |

@@ -243,8 +243,104 @@ export interface PayLinkSchemaResponse {
   version: string;
   currency: { default: string; supported: string[] };
   network: { default: string; supported: string[] };
+  /** XEN-708: signed params settle in USDC on Base; other networks are an
+   *  unsigned per-link opt-in (PUT /v1/links/{id}/networks). */
+  accepted_networks?: {
+    signed: boolean;
+    set_with: string;
+    registry: string;
+    available: string[];
+    note?: string;
+  } | null;
   max_amount_usd: string;
   fields: PayLinkSchemaField[];
+}
+
+// --- networks (XEN-678 / XEN-708) -------------------------------------------
+
+/** One coin on one network in the public registry (GET /v1/networks). */
+export interface NetworkCoin {
+  /** As the API reports it: USDC or USDT. */
+  symbol: string;
+  /** As wallets show it, e.g. USDT0 on Monad. */
+  display: string;
+  address: string;
+  decimals: number;
+}
+
+/** One network pay links can take (GET /v1/networks). */
+export interface NetworkDescriptor {
+  network: string;
+  name: string;
+  label: string;
+  kind: string;
+  chain_id: number | null;
+  standard: string;
+  native_symbol: string;
+  confirmations: number;
+  /** false = paid by sending an exact amount (e.g. from an exchange), as on Tron. */
+  wallet: boolean;
+  explorer_name: string;
+  /** URL template with {tx}. */
+  explorer_tx: string;
+  always_on: boolean;
+  needs_pay_to: boolean;
+  coins: NetworkCoin[];
+}
+
+export interface NetworksRegistryResponse {
+  networks: NetworkDescriptor[];
+}
+
+/** The owner's opt-ins beyond Base USDC: `{ethereum: {tokens: ["USDC","USDT"]}, tron: {tokens: ["USDT"], pay_to: "T..."}}`. */
+export type AcceptedNetworks = Record<string, { tokens: string[]; pay_to?: string }>;
+
+/** One network a link takes, as the hosted page offers it. */
+export interface LinkNetworkOffer {
+  network: string;
+  name: string;
+  label: string;
+  kind: string;
+  chain_id: number | null;
+  standard: string;
+  native_symbol: string;
+  confirmations: number;
+  wallet: boolean;
+  explorer_name: string;
+  explorer_tx: string;
+  pay_to: string;
+  tokens: Array<{ symbol: string; address: string; decimals: number }>;
+}
+
+/** GET/PUT /v1/links/{id}/networks. */
+export interface LinkNetworksResponse {
+  link_id: string;
+  /** null = Base USDC only. */
+  accepted_networks: AcceptedNetworks | null;
+  networks: LinkNetworkOffer[];
+  available?: Array<Record<string, unknown>>;
+}
+
+/** One stablecoin balance from GET /v1/links/{id}/wallet-scan. */
+export interface WalletScanBalance {
+  network: string;
+  token: string;
+  chain_id: number | null;
+  decimals: number;
+  /** 6-decimal micro units of `token`. */
+  balance_micro: string;
+  native_symbol: string;
+  native_balance: string;
+  fee_native: string;
+  fee_usd: string | null;
+  has_gas: boolean;
+  confirmations: number;
+}
+
+export interface WalletScanResponse {
+  address: string;
+  balances: WalletScanBalance[];
+  unavailable: string[];
 }
 
 export interface PayLinkFieldIssue {
@@ -330,6 +426,13 @@ export interface MerchantPaymentItem {
   subscription_id: string | null;
   cycle: number | null;
   created_at: string;
+  // XEN-708: the coin and network the payment used, and the tx on that
+  // network's explorer (same names as the payment.* webhook payload). Absent
+  // on an older platform = USDC on Base.
+  network?: string;
+  token?: string;
+  chain_id?: number | null;
+  explorer_url?: string | null;
 }
 
 export interface MerchantPaymentListResponse {
@@ -629,6 +732,13 @@ export interface Order {
   tracking: string | null;
   tx_hash: string;
   paid_at: string;
+  // XEN-708: the coin and network the payment used, and the tx on that
+  // network's explorer (same names as the payment.* webhook payload). Absent
+  // on an older platform = USDC on Base.
+  network?: string;
+  token?: string;
+  chain_id?: number | null;
+  explorer_url?: string | null;
 }
 
 export interface OrderListResponse {

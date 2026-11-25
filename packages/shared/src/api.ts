@@ -1,5 +1,9 @@
 import type {
   GateResponse,
+  NetworksRegistryResponse,
+  AcceptedNetworks,
+  LinkNetworksResponse,
+  WalletScanResponse,
   VerifiedPaymentResponse,
   MeAgentProfile,
   AgentSummary,
@@ -448,6 +452,65 @@ export async function meSessionRequest<T>(
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+/** GET /v1/networks — public, no auth (XEN-708). Every network and coin pay
+ *  links can take, with confirmations and explorer. */
+export async function listNetworks(apiBase: string): Promise<NetworksRegistryResponse> {
+  const res = await fetch(`${apiBase}/v1/networks`, {
+    headers: { "User-Agent": USER_AGENT },
+  });
+  if (!res.ok) throw new Error(await errorMessage(res));
+  return (await res.json()) as NetworksRegistryResponse;
+}
+
+/** GET /v1/links/{id}/networks — owner-only (XEN-678). */
+export function getLinkNetworks(
+  apiBase: string,
+  token: string,
+  linkId: string,
+): Promise<LinkNetworksResponse> {
+  return meSessionRequest<LinkNetworksResponse>(
+    apiBase,
+    token,
+    "GET",
+    `/v1/links/${encodeURIComponent(linkId)}/networks`,
+  );
+}
+
+/** PUT /v1/links/{id}/networks — owner-only, whole-state replace; `{}` = Base
+ *  USDC only. 409 when the link's address is a smart contract on a chosen EVM
+ *  network. */
+export function putLinkNetworks(
+  apiBase: string,
+  token: string,
+  linkId: string,
+  networks: AcceptedNetworks,
+): Promise<LinkNetworksResponse> {
+  return meSessionRequest<LinkNetworksResponse>(
+    apiBase,
+    token,
+    "PUT",
+    `/v1/links/${encodeURIComponent(linkId)}/networks`,
+    { networks },
+  );
+}
+
+/** GET /v1/links/{id}/wallet-scan?address= — public (XEN-678). A wallet's
+ *  USDC/USDT balances on every network the link takes with a connected
+ *  wallet, with each network's fee. Read-only; the address isn't stored. */
+export async function scanWallet(
+  apiBase: string,
+  linkId: string,
+  address: string,
+): Promise<WalletScanResponse> {
+  const qs = new URLSearchParams({ address });
+  const res = await fetch(
+    `${apiBase}/v1/links/${encodeURIComponent(linkId)}/wallet-scan?${qs.toString()}`,
+    { headers: { "User-Agent": USER_AGENT } },
+  );
+  if (!res.ok) throw new Error(await errorMessage(res));
+  return (await res.json()) as WalletScanResponse;
 }
 
 /** GET /v1/links/schema — public, no auth. The create-body descriptor. */

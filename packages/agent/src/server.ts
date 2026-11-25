@@ -14,6 +14,7 @@ import * as subs from "./tools/subscribers.js";
 import * as collect from "./tools/collect.js";
 import * as linksX from "./tools/links-extra.js";
 import * as hooks from "./tools/webhooks.js";
+import * as nets from "./tools/networks.js";
 import * as agentX from "./tools/agent-extra.js";
 import * as sites from "./tools/sites.js";
 import * as account from "./tools/account.js";
@@ -428,7 +429,7 @@ export function createServer(): McpServer {
   );
   registerAgentTool(
     "xenarch_list_payments",
-    "List payments RECEIVED across the merchant's pay-links (newest first), with cursor pagination. Read-only.",
+    "List payments RECEIVED across the merchant's pay-links (newest first), with cursor pagination. Each carries the coin (token), network and explorer_url it arrived on. Read-only.",
     merchant.xenarchListPaymentsSchema,
     { title: "List Received Payments", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     merchant.xenarchListPayments,
@@ -629,7 +630,7 @@ export function createServer(): McpServer {
   );
   registerAgentTool(
     "xenarch_list_orders",
-    "List paid orders across pay-links (buyer, shipping, status, tracking) with filters + cursor. Read-only.",
+    "List paid orders across pay-links (buyer, shipping, status, tracking, coin/network/explorer_url) with filters + cursor. Read-only.",
     linksX.listOrdersSchema,
     { title: "List Orders", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     linksX.listOrdersTool,
@@ -647,6 +648,36 @@ export function createServer(): McpServer {
     linksX.exportOrdersSchema,
     { title: "Export Orders CSV", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     linksX.exportOrdersTool,
+  );
+
+  // --- Networks and coins (XEN-718) ------------------------------------------
+  registerAgentTool(
+    "xenarch_list_networks",
+    "List every network and stablecoin Xenarch pay links can take (Base, Ethereum, BNB Chain, Monad, Tron; USDC/USDT), with confirmations and explorer. Public, read-only. Agent x402 payments stay USDC on Base.",
+    nets.listNetworksSchema,
+    { title: "List Networks", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    nets.listNetworksTool,
+  );
+  registerAgentTool(
+    "xenarch_get_link_networks",
+    "Read which coins and networks one of your pay links takes beyond Base USDC (accepted_networks) and what its checkout offers. Read-only.",
+    nets.getLinkNetworksSchema,
+    { title: "Get Link Networks", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    nets.getLinkNetworksTool,
+  );
+  registerAgentTool(
+    "xenarch_set_link_networks",
+    "Set which coins and networks a pay link takes beyond Base USDC (whole-state; {} = Base USDC only; Tron needs a pay_to T-address). Refused (409) when the link's wallet is a smart contract on that network. Requires confirm: true.",
+    nets.setLinkNetworksSchema,
+    { title: "Set Link Networks", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    nets.setLinkNetworksTool,
+  );
+  registerAgentTool(
+    "xenarch_scan_wallet",
+    "Check a wallet's USDC/USDT balances on every network a pay link takes with a connected wallet, with each network's fee and whether the wallet holds enough gas. Defaults to this agent's wallet. Read-only; the address isn't stored.",
+    nets.scanWalletSchema,
+    { title: "Scan Wallet", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    nets.scanWalletTool,
   );
 
   // --- Pay-link webhooks (XEN-517) --------------------------------------------
