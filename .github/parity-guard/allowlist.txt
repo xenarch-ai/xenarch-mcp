@@ -1,0 +1,35 @@
+# Parity guard allowlist (XEN-716). One glob per line, matched against the
+# repo-relative path (fnmatch: `*` also crosses `/`). Only parts that are
+# Base-only BY DESIGN belong here; everything else names a payment's coin,
+# network and explorer from the networks registry (GET /v1/networks).
+
+# The guard itself and the rule's documentation.
+.github/parity-guard/*
+.github/workflows/parity-guard.yml
+CLAUDE.md
+
+# x402 agent payments and gates: USDC on Base by design (EIP-3009). The
+# package readmes and registry manifests describe that server.
+packages/shared/src/payment.ts
+packages/shared/src/config.ts
+packages/agent/src/tools/pay.ts
+packages/agent/src/tools/pay-link.ts
+packages/agent/src/tools/check-gate.ts
+packages/agent/src/tools/wallet-status.ts
+packages/agent/src/agent-*
+README.md
+*/README.md
+LAUNCHGUIDE.md
+server.json
+glama.json
+smithery.yaml
+
+# Permit subscriptions (EIP-2612 on Base USDC) and their on-chain collection.
+packages/agent/src/tools/collect.ts
+
+# Signed link params and the bundled link schema (settle in USDC on Base).
+packages/shared/src/pay-link-signer.ts
+packages/agent/src/tools/merchant.ts
+
+# The networks tools (they explain the Base default).
+packages/agent/src/tools/networks.ts

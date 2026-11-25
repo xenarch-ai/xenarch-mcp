@@ -50,3 +50,13 @@ See `../Information/design/mcp-servers.md` for MCP server design.
 Follow the canonical workspace workflow in `../Information/workflow.md` (Retasc issue → claim → worktree → PR → deploy → validate on prod → merge-commit, never squash).
 
 **Parallel sessions:** before any `kamal deploy` of platform or dashboard, claim the per-service deploy baton in Retasc issue **XEN-524** (via its append-only CLAIM/RELEASE comment log) and merge `main` into your branch first — one session validates on a given prod service at a time. See `../Information/workflow.md` → "Parallel sessions — prod deploy baton".
+
+## Parity guard: no hard-coded Base (XEN-716)
+
+Pay links take USDC and USDT on Base, Ethereum, BNB Chain, Monad and Tron. Name a payment's coin, network and explorer from the networks registry (`GET /v1/networks`, XEN-708) or the payment's own `network` / `token` / `explorer_url`, never a hard-coded Base.
+
+- CI (`.github/workflows/parity-guard.yml`) fails a PR that **adds** a `basescan.org` URL, the words "USDC on Base", the Base USDC contract address or a `USDC_ADDRESS`-style constant outside `.github/parity-guard/allowlist.txt`. Existing lines on main are not checked.
+- The allowlist holds only the parts that are Base-only by design: x402 agent payments, bot gating, permit subscriptions, signed link params, Coinbase cash-out, XenPay and the chain registry. Add a path there only for that reason.
+- One deliberate line elsewhere can opt out with a trailing `parity-guard: allow <reason>` comment.
+
+In this repo payments and orders carry `network` / `token` / `explorer_url` (`@xenarch/core` types), and `xenarch_list_networks` reads the registry.
